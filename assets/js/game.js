@@ -18,6 +18,12 @@ const CONFIG = {
   MAX_PARTICLES: 400,
   MAX_DAMAGE_TEXTS: 120,
   MAX_EFFECTS: 180,
+  MAX_CANVAS_PIXELS: 2300000,
+  MAX_DPR: 1.25,
+  GROUND_RENDER_SCALE: 0.55,
+  GROUND_REFRESH_MS: 80,
+  HUD_REFRESH_INTERVAL: 0.1,
+  DRAW_MARGIN: 140,
   EXP_BASE: 8,
   EXP_GROWTH: 1.25,
   SPAWN_RING_MIN: 580,
@@ -66,9 +72,21 @@ const STAGE_VISUALS = [
 ];
 function stageIndexForTime(t){ return t<90?0:t<180?1:t<300?2:t<420?3:4; }
 function stageVisualForTime(t){ return STAGE_VISUALS[stageIndexForTime(t)]; }
+const RGBA_RGB_CACHE = new Map();
 function rgba(hex,a){
-  const h=hex.replace("#",""); const v=parseInt(h.length===3?h.split("").map(c=>c+c).join(""):h,16);
-  return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${a})`;
+  let rgb = RGBA_RGB_CACHE.get(hex);
+  if (!rgb){
+    const h=hex.replace("#",""); const v=parseInt(h.length===3?h.split("").map(c=>c+c).join(""):h,16);
+    rgb=[(v>>16)&255,(v>>8)&255,v&255];
+    RGBA_RGB_CACHE.set(hex,rgb);
+  }
+  return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+}
+function worldObjectVisible(obj,cam,w,h,margin){
+  if(!obj||!Number.isFinite(obj.x)||!Number.isFinite(obj.y))return true;
+  const r=Number.isFinite(obj.radius)?obj.radius:Number.isFinite(obj.size)?obj.size:40;
+  const m=margin==null?CONFIG.DRAW_MARGIN:margin;
+  return obj.x+r>=cam.x-m&&obj.x-r<=cam.x+w+m&&obj.y+r>=cam.y-m&&obj.y-r<=cam.y+h+m;
 }
 function polygonPath(ctx, pts){
   ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath();
@@ -897,7 +915,11 @@ function getTimeScale(t){
 class Game{
   constructor(canvas){
     this.canvas = canvas;
-    this.ctx = canvas.getContext("2d");
+    this.ctx = canvas.getContext("2d", {alpha:false});
+    this.groundCanvas = document.createElement("canvas");
+    this.groundCtx = this.groundCanvas.getContext("2d", {alpha:false});
+    this.groundCache = {dirty:true,lastRender:0,lastElapsed:-1,lastCamX:NaN,lastCamY:NaN,stage:-1};
+    this.hudRefreshTimer = 0;
     this.input = new InputManager();
     this.sound = new SoundManager();
     this.resize();
@@ -934,19 +956,43 @@ class Game{
   }
 
   resize(){
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
     this.viewW = window.innerWidth;
     this.viewH = window.innerHeight;
+    const rawDpr = Math.min(CONFIG.MAX_DPR, window.devicePixelRatio || 1);
+    const pixelCap = Math.sqrt(CONFIG.MAX_CANVAS_PIXELS / Math.max(1, this.viewW*this.viewH));
+    const dpr = Math.max(.55, Math.min(rawDpr, pixelCap));
+    this.renderDpr = dpr;
     this.canvas.style.width = this.viewW + "px";
     this.canvas.style.height = this.viewH + "px";
-    this.canvas.width = Math.round(this.viewW * dpr);
-    this.canvas.height = Math.round(this.viewH * dpr);
+    this.canvas.width = Math.max(1,Math.round(this.viewW * dpr));
+    this.canvas.height = Math.max(1,Math.round(this.viewH * dpr));
     this.ctx.setTransform(dpr,0,0,dpr,0,0);
+    this.ctx.imageSmoothingEnabled = true;
+    const groundScale = CONFIG.GROUND_RENDER_SCALE;
+    this.groundCanvas.width = Math.max(1,Math.round(this.viewW * groundScale));
+    this.groundCanvas.height = Math.max(1,Math.round(this.viewH * groundScale));
+    this.groundCtx.setTransform(groundScale,0,0,groundScale,0,0);
+    this.groundCtx.imageSmoothingEnabled = true;
+    this.groundCache.dirty = true;
   }
 
   shake(mag,time){this.shakeMag=Math.max(this.shakeMag,mag);this.shakeTime=Math.max(this.shakeTime,time);}
   triggerHitFlash(){this._hitFlashTime=.15;}
   addEffect(effect){if(!effect)return;if(this.effects.length>=CONFIG.MAX_EFFECTS)this.effects.shift();this.effects.push(effect);}
+  refreshGroundCache(now,cam,w,h){
+    const cache=this.groundCache,elapsed=this.elapsed||0,stage=stageIndexForTime(elapsed);
+    const cameraMoved=Math.abs(cam.x-cache.lastCamX)>.5||Math.abs(cam.y-cache.lastCamY)>.5;
+    const timeChanged=Math.abs(elapsed-cache.lastElapsed)>.03;
+    if(!cache.dirty&&stage===cache.stage&&!cameraMoved&&!timeChanged)return;
+    if(!cache.dirty&&stage===cache.stage&&now-cache.lastRender<CONFIG.GROUND_REFRESH_MS)return;
+    const gctx=this.groundCtx,scale=CONFIG.GROUND_RENDER_SCALE;
+    gctx.setTransform(1,0,0,1,0,0);
+    gctx.clearRect(0,0,this.groundCanvas.width,this.groundCanvas.height);
+    gctx.setTransform(scale,0,0,scale,0,0);
+    this.drawGround(gctx,cam,w,h);
+    cache.dirty=false;cache.lastRender=now;cache.lastElapsed=elapsed;cache.lastCamX=cam.x;cache.lastCamY=cam.y;cache.stage=stage;
+  }
+  drawGroundCached(ctx,cam,w,h,now){this.refreshGroundCache(now,cam,w,h);ctx.drawImage(this.groundCanvas,0,0,w,h);}
 
   loadRecords(){
     let rec = {};
@@ -1118,6 +1164,8 @@ class Game{
     this._hitFlashTime = 0;
     this.stageIndex = 0;
     this.stageTransition = 1.9;
+    this.hudRefreshTimer = 0;
+    this.groundCache.dirty = true;
 
     this.generateObstacles();
     this.generateDecorations();
@@ -1127,6 +1175,7 @@ class Game{
     this.lastTime = performance.now();
     document.getElementById("bossBarWrap").classList.add("hidden");
     this.updateWeaponBarDOM();
+    this.updateHUD();
     if(this.player.startBonusChoices>0){this.pendingLevelUps=this.player.startBonusChoices;this.openLevelUp();}
   }
 
@@ -1725,8 +1774,12 @@ class Game{
 
     if (this.pendingLevelUps > 0 && this.state === "playing"){ this.openLevelUp(); }
 
-    if (this.boss) this.updateBossBarDOM();
-    this.updateHUD();
+    this.hudRefreshTimer-=dt;
+    if(this.hudRefreshTimer<=0){
+      this.hudRefreshTimer=CONFIG.HUD_REFRESH_INTERVAL;
+      if (this.boss) this.updateBossBarDOM();
+      this.updateHUD();
+    }
   }
 
   updateBossBarDOM(){
@@ -1779,22 +1832,22 @@ class Game{
     ctx.translate(sx,sy);
     const cam=this.camera;
 
-    this.drawGround(ctx,cam,w,h);
+    this.drawGroundCached(ctx,cam,w,h,nowT);
     const stageVisual=stageVisualForTime(this.elapsed||0);
     for(const d of this.decorations)d.draw(ctx,cam,stageVisual,this.elapsed||0);
     for (const o of this.obstacles){
-      if (o.x<cam.x-100||o.x>cam.x+w+100||o.y<cam.y-100||o.y>cam.y+h+100) continue;
+      if (!worldObjectVisible(o,cam,w,h,100)) continue;
       o.draw(ctx,cam);
     }
-    for (const g of this.gems) g.draw(ctx,cam);
-    for (const it of this.items) it.draw(ctx,cam);
-    for (const tr of this.treasures) tr.draw(ctx,cam);
-    for (const ex of this.explosions) ex.draw(ctx,cam);
-    for (const e of this.enemies) e.draw(ctx,cam);
+    for (const g of this.gems){if(worldObjectVisible(g,cam,w,h,70))g.draw(ctx,cam);}
+    for (const it of this.items){if(worldObjectVisible(it,cam,w,h,70))it.draw(ctx,cam);}
+    for (const tr of this.treasures){if(worldObjectVisible(tr,cam,w,h,90))tr.draw(ctx,cam);}
+    for (const ex of this.explosions){if(worldObjectVisible(ex,cam,w,h,180))ex.draw(ctx,cam);}
+    for (const e of this.enemies){if(worldObjectVisible(e,cam,w,h,100))e.draw(ctx,cam);}
     if (this.boss && !this.boss.dead) this.boss.draw(ctx,cam);
     if (this.player) this.player.draw(ctx,cam);
-    for (const proj of this.projectiles) proj.draw(ctx,cam);
-    for (const proj of this.enemyProjectiles) proj.draw(ctx,cam);
+    for (const proj of this.projectiles){if(worldObjectVisible(proj,cam,w,h,120))proj.draw(ctx,cam);}
+    for (const proj of this.enemyProjectiles){if(worldObjectVisible(proj,cam,w,h,120))proj.draw(ctx,cam);}
 
     const weaponList = this.player ? this.player.weapons : [];
     for (const wp of weaponList){
@@ -1867,9 +1920,9 @@ class Game{
       }
     }
 
-    for (const fx of this.effects) fx.draw(ctx,cam);
-    for (const pt of this.particles) pt.draw(ctx,cam);
-    for (const dtxt of this.damageTexts) dtxt.draw(ctx,cam);
+    for (const fx of this.effects){if(worldObjectVisible(fx,cam,w,h,220))fx.draw(ctx,cam);}
+    for (const pt of this.particles){if(worldObjectVisible(pt,cam,w,h,60))pt.draw(ctx,cam);}
+    for (const dtxt of this.damageTexts){if(worldObjectVisible(dtxt,cam,w,h,80))dtxt.draw(ctx,cam);}
     ctx.restore();
 
     this.drawAtmosphereOverlay(ctx,w,h);
