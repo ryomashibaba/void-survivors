@@ -76,6 +76,11 @@ if ([string]::IsNullOrWhiteSpace($clipboard)) {
 
 $clipboard = $clipboard.Replace("`r`n", "`n")
 
+# git apply requires a line ending after the final patch line.
+if (-not $clipboard.EndsWith("`n")) {
+    $clipboard += "`n"
+}
+
 $commitMessage = "Update VOID SURVIVORS"
 
 if ($clipboard -match '(?m)^# COMMIT:\s*(.+)$') {
