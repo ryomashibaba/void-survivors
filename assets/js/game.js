@@ -1711,26 +1711,114 @@ class Game{
     for (const proj of this.projectiles) proj.update(dt);
     for (const proj of this.enemyProjectiles) proj.update(dt);
 
-    // プレイヤー弾 vs 敵
+    // プレイヤー弾 vs 敵（空間グリッド）
     for (const proj of this.projectiles){
       if (proj.dead) continue;
-      // マップ範囲外に出たら削除
-      if (proj.x<-50||proj.y<-50||proj.x>CONFIG.MAP_W+50||proj.y>CONFIG.MAP_H+50) proj.dead=true;
-      for (const e of this.enemies){
-        if (e.dead || proj.hitSet.has(e.uid)) continue;
-        const d = U.dist(proj.x,proj.y,e.x,e.y);
-        if (d < proj.radius+e.radius){
-          proj.hitSet.add(e.uid);
-          this.damageEnemy(e, proj.damage, proj.crit);
-          if (proj.pierce > 0){ proj.pierce--; } else { proj.dead = true; break; }
+
+      if (
+        proj.x < -50 ||
+        proj.y < -50 ||
+        proj.x > CONFIG.MAP_W + 50 ||
+        proj.y > CONFIG.MAP_H + 50
+      ){
+        proj.dead = true;
+      }
+
+      const hitEnemy = (enemy)=>{
+        if (
+          proj.dead ||
+          !enemy ||
+          enemy.dead ||
+          proj.hitSet.has(enemy.uid)
+        ){
+          return;
+        }
+
+        const hitRadius =
+          proj.radius +
+          enemy.radius;
+
+        if (
+          U.dist2(
+            proj.x,
+            proj.y,
+            enemy.x,
+            enemy.y
+          ) >=
+          hitRadius * hitRadius
+        ){
+          return;
+        }
+
+        proj.hitSet.add(enemy.uid);
+
+        this.damageEnemy(
+          enemy,
+          proj.damage,
+          proj.crit
+        );
+
+        if (proj.pierce > 0){
+          proj.pierce--;
+        }else{
+          proj.dead = true;
+        }
+      };
+
+      const enemyGrid =
+        this._enemySpatial;
+
+      if (
+        enemyGrid &&
+        typeof enemyGrid.forEachNearby === "function"
+      ){
+        enemyGrid.forEachNearby(
+          proj.x,
+          proj.y,
+          proj.radius + 120,
+          hitEnemy
+        );
+      }else{
+        for (const enemy of this.enemies){
+          hitEnemy(enemy);
+
+          if (proj.dead){
+            break;
+          }
         }
       }
-      if (this.boss && !this.boss.dead && !proj.dead && !proj.bossHit){
-        const d = U.dist(proj.x,proj.y,this.boss.x,this.boss.y);
-        if (d < proj.radius+this.boss.radius){
+
+      if (
+        this.boss &&
+        !this.boss.dead &&
+        !proj.dead &&
+        !proj.bossHit
+      ){
+        const hitRadius =
+          proj.radius +
+          this.boss.radius;
+
+        if (
+          U.dist2(
+            proj.x,
+            proj.y,
+            this.boss.x,
+            this.boss.y
+          ) <
+          hitRadius * hitRadius
+        ){
           proj.bossHit = true;
-          this.damageBoss(proj.damage, proj.crit);
-          if (proj.pierce>0) proj.pierce--; else proj.dead=true;
+
+          this.damageBoss(
+            proj.damage,
+            proj.crit
+          );
+
+          if (proj.pierce > 0){
+            proj.pierce--;
+          }else{
+            proj.dead = true;
+          }
         }
       }
     }
