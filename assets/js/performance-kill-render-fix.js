@@ -45,10 +45,10 @@
 
     const ctx = canvas.getContext("2d");
     ctx.translate(32,32);
-    ctx.globalCompositeOperation = "lighter";
+    ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = color;
     ctx.shadowColor = color;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 0;
 
     drawParticleShape(ctx,shape,8);
 
@@ -137,7 +137,7 @@
 
     ctx.rotate(this.rot);
     ctx.globalAlpha = alpha;
-    ctx.globalCompositeOperation = "lighter";
+    ctx.globalCompositeOperation = "source-over";
 
     ctx.drawImage(
       particleSprite(
@@ -172,7 +172,7 @@
       this.radius*(.25+.75*progress);
 
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
+    ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = alpha;
 
     ctx.drawImage(
@@ -225,7 +225,7 @@
     const y = this.y-cam.y;
 
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
+    ctx.globalCompositeOperation = "source-over";
 
     if(this.fill){
       ctx.globalAlpha = alpha;
@@ -287,7 +287,7 @@
     );
 
     ctx.globalCompositeOperation =
-      "lighter";
+      "source-over";
 
     ctx.fillStyle =
       rgba(color,.2);

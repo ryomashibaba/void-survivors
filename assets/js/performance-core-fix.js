@@ -492,7 +492,7 @@
       );
 
       ctx.shadowColor = st.accent;
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = 0;
       ctx.fillStyle = "#fff7dc";
 
       ctx.font =
