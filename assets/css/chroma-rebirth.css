@@ -1,0 +1,122 @@
+/* VOID SURVIVORS / CHROMA REBIRTH */
+#weaponBar{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  width:min(570px,46vw)!important;
+  max-height:55vh!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#ffd447 #17112c;
+  padding:5px 18px 16px 5px!important;
+  pointer-events:auto!important;
+  touch-action:pan-y;
+  mask-image:linear-gradient(to bottom,transparent 0,#000 13px,#000 calc(100% - 22px),transparent 100%);
+}
+#weaponBar::-webkit-scrollbar{width:12px}
+#weaponBar::-webkit-scrollbar-track{background:#17112c;border:2px solid #fff7dc}
+#weaponBar::-webkit-scrollbar-thumb{background:#ffd447;border:2px solid #17112c}
+#weaponBar::after{
+  content:"SCROLL / POWER ARCHIVE";
+  position:sticky;
+  bottom:-12px;
+  align-self:flex-start;
+  padding:5px 9px;
+  background:#17112c;
+  color:#fff7dc;
+  border:2px solid #ffd447;
+  font:900 11px/1 monospace;
+  letter-spacing:1px;
+  z-index:3;
+}
+.ability-panel.rebirth-power{
+  width:100%;
+  flex:none;
+  transform:none!important;
+  clip-path:polygon(0 11px,11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%);
+  border-width:3px;
+  border-left-width:9px;
+  background:linear-gradient(105deg,rgba(255,247,220,.98),rgba(255,255,255,.93));
+  box-shadow:7px 7px 0 #17112c;
+}
+.ability-panel.rebirth-power .ability-desc{display:block!important}
+.ability-panel.rebirth-power .ability-name{letter-spacing:.2px}
+.ability-panel.rebirth-power .ability-level{white-space:nowrap}
+.power-meter{
+  grid-column:1/-1;
+  height:8px;
+  border:2px solid #17112c;
+  background:#d9cfaa;
+  overflow:hidden;
+  margin-top:4px;
+}
+.power-meter>span{display:block;height:100%;background:var(--ability-color);width:var(--meter,0%)}
+.power-category{
+  display:inline-block;
+  margin-bottom:12px;
+  padding:6px 10px;
+  border:3px solid #191426;
+  background:var(--card-color,#ffd447);
+  color:#191426;
+  font:1000 13px/1 monospace;
+  letter-spacing:1.5px;
+  transform:rotate(-1deg);
+}
+.power-trigger{
+  margin:14px 0 12px;
+  padding:10px 12px;
+  border-left:8px solid var(--card-color,#ffd447);
+  background:#191426;
+  color:#fff7dc;
+  font:900 15px/1.55 monospace;
+}
+.upgrade-card.rebirth-card{
+  --card-color:#ffd447;
+  border-top:11px solid var(--card-color);
+  box-shadow:10px 10px 0 #191426,-7px -7px 0 var(--card-color);
+  background:
+    linear-gradient(160deg,rgba(255,255,255,.98),rgba(255,247,220,.96)),
+    repeating-linear-gradient(135deg,transparent 0 22px,rgba(0,0,0,.035) 22px 25px);
+}
+.upgrade-card.rebirth-card::before{
+  content:attr(data-rank-label);
+  position:absolute;
+  top:12px;
+  right:14px;
+  padding:6px 9px;
+  background:#191426;
+  color:#fff7dc;
+  border:2px solid var(--card-color);
+  font:900 12px/1 monospace;
+}
+.upgrade-card.rebirth-card:hover{background:#fffdf2;box-shadow:14px 14px 0 #191426,-9px -9px 0 var(--card-color)}
+.upgrade-card.rebirth-card .upgrade-icon{
+  color:var(--card-color);
+  text-shadow:4px 4px 0 #191426;
+}
+.upgrade-card.rebirth-card .upgrade-current{border-color:#191426;background:#f0e4bb}
+.upgrade-card.rebirth-card .upgrade-current .after{color:#191426;background:var(--card-color);padding:7px 9px;margin-top:7px;border:2px solid #191426}
+.rebirth-warning{
+  color:#ff5268;
+  font-weight:1000;
+}
+.enemy-telegraph-label{
+  position:absolute;
+  pointer-events:none;
+  z-index:18;
+  color:#fff7dc;
+  background:#ff5268;
+  border:2px solid #191426;
+  padding:4px 7px;
+  font:900 10px/1 monospace;
+}
+.skill-tree-header .rebirth-tree-note{color:#ff5268;font-weight:1000}
+@media(max-width:780px){
+  #weaponBar{width:min(430px,80vw)!important;max-height:42vh!important;padding-right:12px!important}
+  #weaponBar::after{font-size:9px}
+  .upgrade-card.rebirth-card{min-height:0!important}
+  .power-trigger{font-size:13px}
+  .power-category{font-size:11px}
+}
