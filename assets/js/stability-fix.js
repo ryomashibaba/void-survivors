@@ -111,6 +111,9 @@
 
     if (!card) return;
 
+    // CHROMA REBIRTHのカードは、カード自身の処理で重複選択を防ぐ。
+    if (card.classList.contains("rebirth-card")) return;
+
     const game = window.__game;
     if (
       !game ||
