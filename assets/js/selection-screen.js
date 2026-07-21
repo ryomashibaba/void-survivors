@@ -20,7 +20,7 @@
     if (!card) return;
 
     card.classList.add("rebirth-card");
-    queueMicrotask(() => card.classList.remove("rebirth-card"));
+    setTimeout(() => card.classList.remove("rebirth-card"), 0);
   }, true);
 
   if (document.getElementById(STYLE_ID)) return;
