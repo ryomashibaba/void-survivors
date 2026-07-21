@@ -1,10 +1,35 @@
 @echo off
-setlocal
-chcp 65001 >nul
+setlocal EnableExtensions
 cd /d "%~dp0"
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0apply-update.ps1"
-set "exitCode=%errorlevel%"
+title VOID SURVIVORS Updater
+
+set "EXIT_CODE=1"
+
 echo.
-if not "%exitCode%"=="0" echo 更新処理はエラーコード %exitCode% で終了しました。
+echo ========================================
+echo   VOID SURVIVORS UPDATE
+echo ========================================
+echo.
+
+if not exist "%~dp0apply-update.ps1" (
+    echo ERROR: apply-update.ps1 was not found.
+    goto :END
+)
+
+where powershell.exe >nul 2>nul
+if errorlevel 1 (
+    echo ERROR: powershell.exe was not found.
+    goto :END
+)
+
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0apply-update.ps1"
+set "EXIT_CODE=%ERRORLEVEL%"
+
+:END
+echo.
+echo ========================================
+echo Exit code: %EXIT_CODE%
+echo ========================================
+echo.
 pause
-exit /b %exitCode%
+exit /b %EXIT_CODE%
