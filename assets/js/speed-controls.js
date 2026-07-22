@@ -3,7 +3,7 @@
 (() => {
   const MIN_SPEED = 1;
   const MAX_SPEED = 5;
-  const GAME_VERSION = "2026.07.21";
+  const GAME_VERSION = "2026.07.22";
 
   function clampSpeed(value){
     const speed = Math.round(Number(value) || MIN_SPEED);
