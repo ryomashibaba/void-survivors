@@ -90,7 +90,7 @@
     if (style && style.parentNode === document.head) document.head.appendChild(style);
 
     const version = document.getElementById("gameVersion");
-    if (version) version.textContent = `VER. ${VISUAL_VERSION}`;
+    if (version) version.textContent = `VER. ${window.__VOID_SURVIVORS_VERSION || VISUAL_VERSION}`;
   }
 
   window.addEventListener("load", install, {once:true});

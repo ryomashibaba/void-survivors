@@ -28,6 +28,12 @@
 .abyss-layer-stepper button:disabled{opacity:.35;cursor:not-allowed;box-shadow:none;}
 #abyssLayerValue{min-width:50px;text-align:center;font:1000 28px/1 monospace;color:var(--abyss-coral);}
 .abyss-layer-summary,.challenge-summary{font:800 11px/1.5 "Yu Gothic UI",sans-serif;color:#51475d;margin-top:8px;}
+.abyss-layer-lock{margin-top:10px;padding:10px 12px;border:2px solid var(--abyss-ink);background:#f2e8c7;font:1000 11px/1.5 "Yu Gothic UI",sans-serif;}
+.abyss-layer-card.is-locked{box-shadow:6px 6px 0 var(--abyss-mint);}
+.abyss-layer-card.is-locked .abyss-layer-stepper,
+.abyss-layer-card.is-locked .challenge-select-label,
+.abyss-layer-card.is-locked .challenge-select,
+.abyss-layer-card.is-locked .challenge-summary{display:none;}
 .challenge-select-label{display:block;margin-top:11px;font:1000 10px/1.2 monospace;letter-spacing:1px;color:#675b72;}
 .challenge-select{
   width:100%;margin-top:5px;padding:9px 10px;border:3px solid var(--abyss-ink);background:var(--abyss-paper);color:var(--abyss-ink);
@@ -52,7 +58,8 @@
   font:1000 10px/1.15 monospace;box-shadow:3px 3px 0 var(--abyss-sun);
 }
 
-.abyss-power-card{--card-color:var(--abyss-mint);box-shadow:10px 10px 0 var(--card-color)!important;min-height:350px!important;}
+.abyss-power-card{--card-color:var(--abyss-mint);appearance:none;width:100%;font:inherit;box-shadow:10px 10px 0 var(--card-color)!important;min-height:350px!important;}
+.abyss-power-card:focus-visible{outline:5px solid #fff;outline-offset:5px;transform:translate(-3px,-4px);}
 .abyss-power-card::after{
   content:attr(data-rank-label);position:absolute;right:16px;bottom:14px;max-width:58%;padding:5px 7px;
   background:var(--abyss-ink);color:#fff;font:900 9px/1.2 monospace;text-align:right;
@@ -61,6 +68,8 @@
 .abyss-power-card.kind-synergy{background:linear-gradient(145deg,#fff7dc,#e6dcff);}
 .abyss-power-card .power-category{display:inline-block;margin-bottom:9px;padding:4px 7px;background:var(--card-color);border:2px solid var(--abyss-ink);font:1000 9px/1 monospace;letter-spacing:1px;}
 .abyss-power-card .power-trigger{font:1000 10px/1.45 monospace;color:#5c4d69;margin:0 0 8px;}
+.power-build-tags{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 9px;}
+.power-build-tags span{padding:4px 6px;border:2px solid var(--abyss-ink);background:#fff;color:var(--abyss-ink);font:1000 8px/1.1 monospace;}
 .abyss-power-card .upgrade-desc{font-size:13px;line-height:1.65;}
 .abyss-power-card .upgrade-current{font-size:10px;line-height:1.45;margin-bottom:42px;}
 .banish-choice{
@@ -124,6 +133,9 @@
 .damage-source-row small{color:#73677b;}
 .analysis-stat b{text-align:right;max-width:65%;font-size:11px;color:var(--abyss-violet);}
 .damage-source-empty{padding:12px;color:#746a7b;font-size:12px;}
+.run-next-goal{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;padding:11px 13px;border:3px solid var(--abyss-ink);background:var(--abyss-sun);}
+.run-next-goal span{font:1000 10px/1.2 monospace;color:#61531d;}
+.run-next-goal strong{font:1000 13px/1.35 "Yu Gothic UI",sans-serif;text-align:right;}
 
 .abyss-high-contrast #gameCanvas{filter:contrast(1.14) saturate(1.05)!important;}
 .abyss-high-contrast #topLeftHud,.abyss-high-contrast #topRightHud,.abyss-high-contrast #stageRuleHud,.abyss-high-contrast .ability-panel{background:#fffdf2!important;}
@@ -167,6 +179,7 @@
   .upgrade-choices{grid-template-columns:1fr!important;}
   .analysis-grid{grid-template-columns:1fr;}
   .run-analysis>header{align-items:flex-start;flex-direction:column;}
+  .run-next-goal{align-items:flex-start;flex-direction:column;}.run-next-goal strong{text-align:left;}
 }
 
 @media (max-height:760px) and (min-width:781px){

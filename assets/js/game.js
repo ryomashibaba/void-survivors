@@ -1,5 +1,7 @@
 "use strict";
 
+window.__VOID_SURVIVORS_VERSION = "2026.07.22.4";
+
 /* =========================================================================
    VOID SURVIVORS - 見下ろし型ローグライクサバイバルゲーム
    すべて Canvas + Vanilla JS で実装。外部ライブラリ・画像は使用しない。
@@ -1269,6 +1271,9 @@ class Game{
     const scale = this.currentScale;
     const count = scale.spawnCount * this.balanceMul.spawnMul;
     const n = Math.max(1, Math.round(count));
+    const directedTypes = typeof window.__selectEnemyWaveTypes === "function"
+      ? window.__selectEnemyWaveTypes(this, n)
+      : null;
     for (let i=0;i<n;i++){
       if (this.enemies.length >= CONFIG.MAX_ENEMIES) break;
       const ang = Math.random()*Math.PI*2;
@@ -1283,31 +1288,25 @@ class Game{
         y = U.clamp(y + Math.sin(a2)*nudge,24,CONFIG.MAP_H-24);
       }
 
-      let type = "normal";
+      let type = Array.isArray(directedTypes) && directedTypes[i] ? directedTypes[i] : "normal";
       const r = Math.random();
       const t = this.elapsed;
-      // 0-90秒：初心者向け・学習フェーズ
-      if (t < 90){
-        type = r<0.9 ? "normal" : "fast";
-      }
-      // 90-180秒：多様な敵との出会い、基礎戦術習得
-      else if (t < 180){
-        if (r<0.48) type="normal"; else if (r<0.68) type="fast"; else if (r<0.85) type="heavy"; else type="ranged";
-      }
-      // 180-300秒：中盤・エリート敵初登場、脅威度上昇
-      else if (t < 300){
-        if (r<0.32) type="normal"; else if (r<0.5) type="fast"; else if (r<0.65) type="heavy";
-        else if (r<0.8) type="ranged"; else if (r<0.92) type="splitter"; else type="elite";
-      }
-      // 300-420秒：後半戦・強敵が主流、エリート頻出
-      else if (t < 420){
-        if (r<0.2) type="normal"; else if (r<0.35) type="fast"; else if (r<0.5) type="heavy";
-        else if (r<0.68) type="ranged"; else if (r<0.85) type="splitter"; else type="elite";
-      }
-      // 420-600秒：最終局面・強敵ラッシュ
-      else {
-        if (r<0.12) type="normal"; else if (r<0.25) type="fast"; else if (r<0.4) type="heavy";
-        else if (r<0.62) type="ranged"; else if (r<0.8) type="splitter"; else type="elite";
+      if (!Array.isArray(directedTypes)){
+        // 遭遇ディレクターがない場合の従来フォールバック。
+        if (t < 90){
+          type = r<0.9 ? "normal" : "fast";
+        }else if (t < 180){
+          if (r<0.48) type="normal"; else if (r<0.68) type="fast"; else if (r<0.85) type="heavy"; else type="ranged";
+        }else if (t < 300){
+          if (r<0.32) type="normal"; else if (r<0.5) type="fast"; else if (r<0.65) type="heavy";
+          else if (r<0.8) type="ranged"; else if (r<0.92) type="splitter"; else type="elite";
+        }else if (t < 420){
+          if (r<0.2) type="normal"; else if (r<0.35) type="fast"; else if (r<0.5) type="heavy";
+          else if (r<0.68) type="ranged"; else if (r<0.85) type="splitter"; else type="elite";
+        }else{
+          if (r<0.12) type="normal"; else if (r<0.25) type="fast"; else if (r<0.4) type="heavy";
+          else if (r<0.62) type="ranged"; else if (r<0.8) type="splitter"; else type="elite";
+        }
       }
       const scaleObj = { hp: scale.hp*this.balanceMul.hpMul, atk: scale.atk*this.balanceMul.atkMul, speed: scale.speed };
       this.enemies.push(new Enemy(type, x, y, scaleObj));

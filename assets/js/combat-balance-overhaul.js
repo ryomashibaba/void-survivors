@@ -29,6 +29,11 @@
   const PRECISION = new Set(["world_cutter","hunter_verdict","mirror_legion","storm_throne"]);
   const POWER_IDS = new Set(Object.keys(window.__abyssSystems?.POWER_CATALOG || {}));
   const SYNERGY_IDS = new Set(Object.keys(window.__abyssSystems?.SYNERGIES || {}));
+  const HOOK_NAMES=["beforeUpdate","afterUpdate","damageEnemy","damageBoss","onStart","onEnemyDeath"];
+  const voidHooks=window.__voidHooks&&typeof window.__voidHooks==="object"?window.__voidHooks:{};
+  for(const name of HOOK_NAMES)if(!Array.isArray(voidHooks[name]))voidHooks[name]=[];
+  voidHooks.register=function(name,handler){if(!HOOK_NAMES.includes(name)||typeof handler!=="function")throw new Error(`Unknown VOID hook: ${name}`);this[name].push(handler);return handler;};
+  window.__voidHooks=voidHooks;
 
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const rand=(a,b)=>a+Math.random()*(b-a);
@@ -36,6 +41,33 @@
   const angle=(ax,ay,bx,by)=>Math.atan2(by-ay,bx-ax);
   const roleOf=e=>ROLE[e?.type]||ROLE.normal;
   const systemSource=s=>POWER_IDS.has(s)||SYNERGY_IDS.has(s)||s==="overdrive"||s==="深淵オーバードライブ";
+  const runHooks=(name,payload)=>{for(const handler of voidHooks[name])handler(payload);};
+  const runDamageHooks=(name,payload)=>{for(const handler of voidHooks[name]){const next=handler(payload);if(Number.isFinite(next))payload.damage=next;}return payload.damage;};
+
+  const ENCOUNTER_PACKS={
+    1:[{id:"pincer",types:["fast","fast"]},{id:"bulwark",types:["heavy"]},{id:"artillery",types:["ranged","normal","normal"]}],
+    2:[{id:"pincer",types:["fast","fast"]},{id:"bulwark",types:["heavy","normal"]},{id:"artillery",types:["ranged","normal","normal"]},{id:"minefield",types:["splitter","normal","normal"]},{id:"elite_hunt",types:["elite","normal","normal"]}],
+    3:[{id:"bulwark",types:["heavy","heavy"]},{id:"artillery",types:["ranged","ranged","normal"]},{id:"minefield",types:["splitter","splitter","normal"]},{id:"elite_hunt",types:["elite","fast","normal"]}],
+    4:[{id:"pincer",types:["fast","fast","fast"]},{id:"artillery",types:["ranged","ranged","heavy"]},{id:"minefield",types:["splitter","splitter","fast"]},{id:"elite_hunt",types:["elite","ranged","normal"]}]
+  };
+
+  function encounterState(game){return game._encounterDirector||(game._encounterDirector={nextPack:30,lastPack:"",lowWave:0});}
+  function fillEncounter(types,count,stage,state){
+    while(types.length<count){const fast=stage>0&&state.lowWave++%Math.max(2,5-stage)===0;types.push(fast?"fast":"normal");}
+    return types.slice(0,count);
+  }
+  function selectEnemyWaveTypes(game,count){
+    const time=Math.max(0,game?.elapsed||0),state=encounterState(game),stage=time<90?0:time<180?1:time<300?2:time<420?3:4;
+    if(time<30)return Array(count).fill("normal");
+    if(time<60){if(time>=state.nextPack){state.nextPack=time+20;return fillEncounter(["fast"],count,stage,state);}return Array(count).fill("normal");}
+    if(time<90){if(time>=state.nextPack){state.nextPack=time+20;return fillEncounter(["heavy"],count,stage,state);}return Array(count).fill("normal");}
+    if(time<state.nextPack)return fillEncounter([],count,stage,state);
+    state.nextPack=time+12;
+    const available=(ENCOUNTER_PACKS[stage]||ENCOUNTER_PACKS[4]).filter(pack=>pack.id!==state.lastPack);
+    const pack=available[Math.floor(Math.random()*available.length)]||ENCOUNTER_PACKS[stage][0];state.lastPack=pack.id;
+    return fillEncounter(pack.types.slice(),count,stage,state);
+  }
+  window.__selectEnemyWaveTypes=selectEnemyWaveTypes;
 
   function targetLevelScale(level){
     const n=Math.max(0,Math.floor(Number(level)||1)-1);
@@ -238,7 +270,8 @@
   const oldDamageEnemy=Game.prototype.damageEnemy;
   Game.prototype.damageEnemy=function(enemy,damage,crit){
     if(!enemy||enemy.dead)return;if(!enemy._combatRoleReady)initEnemy(enemy,this);
-    let value=Math.max(0,Number(damage)||0);const source=this._damageSource||"unknown",role=roleOf(enemy);
+    const source=this._damageSource||"unknown",payload={game:this,enemy,damage:Math.max(0,Number(damage)||0),crit:!!crit,source};
+    let value=Math.max(0,Number(runDamageHooks("damageEnemy",payload))||0);const role=roleOf(enemy);
     if(systemSource(source)){value*=levelCorrection(this.player?.level||1);if(!PRECISION.has(source))value*=role.area;}
     else if(source==="death_explosion")value*=role.area*.75;
     if(enemy._combatSpawnGuard>0&&role.threat)value*=PRECISION.has(source)?.58:.2;
@@ -254,13 +287,14 @@
 
   const oldDamageBoss=Game.prototype.damageBoss;
   Game.prototype.damageBoss=function(damage,crit){
-    let value=Math.max(0,Number(damage)||0);if(systemSource(this._damageSource||"unknown"))value*=levelCorrection(this.player?.level||1);
+    const source=this._damageSource||"unknown",payload={game:this,boss:this.boss,damage:Math.max(0,Number(damage)||0),crit:!!crit,source};
+    let value=Math.max(0,Number(runDamageHooks("damageBoss",payload))||0);if(systemSource(source))value*=levelCorrection(this.player?.level||1);
     return oldDamageBoss.call(this,Math.max(1,Math.round(value)),crit);
   };
 
   const oldEnemyDeath=Enemy.prototype.onDeath;
   Enemy.prototype.onDeath=function(game){
-    if(this._combatBalanceDeathHandled)return oldEnemyDeath.call(this,game);this._combatBalanceDeathHandled=true;
+    if(this._combatBalanceDeathHandled)return oldEnemyDeath.call(this,game);this._combatBalanceDeathHandled=true;const hookPayload={game,enemy:this,phase:"before"};runHooks("onEnemyDeath",hookPayload);
     const itemStart=game?.items?.length||0,result=oldEnemyDeath.call(this,game);
     let converted=0;for(const p of game?.enemyProjectiles||[]){
       if(p.dead||p._combatSourceUid!==this.uid||p._combatPersistAfterDeath)continue;p.dead=true;
@@ -268,7 +302,7 @@
     }
     if(game?.items?.length>itemStart){const keep=this.type==="elite"?.8:roleOf(this).threat?.45:.28;
       for(let i=game.items.length-1;i>=itemStart;i--){const penalty=game.items[i]?.type==="heal"?.55:1;if(Math.random()>keep*penalty)game.items.splice(i,1);}}
-    return result;
+    hookPayload.result=result;hookPayload.phase="after";runHooks("onEnemyDeath",hookPayload);return result;
   };
 
   const oldTreasureUpdate=Treasure.prototype.update;
@@ -290,8 +324,12 @@
     return result;
   };
 
+  const oldStartGame=Game.prototype.startGame;
+  Game.prototype.startGame=function(){const result=oldStartGame.apply(this,arguments);this._encounterDirector={nextPack:30,lastPack:"",lowWave:0};runHooks("onStart",{game:this,result});return result;};
+
   const oldGameUpdate=Game.prototype.update;
   Game.prototype.update=function(dt){
+    const updatePayload={game:this,dt};runHooks("beforeUpdate",updatePayload);
     if(this.player){
       if(!this.player._combatRecoveryPrepared){this.player._combatRecoveryPrepared=true;this.player._combatOriginalInvDuration=this.player.invDuration;
         this.player.invDuration=.58+Math.max(0,this.player._combatOriginalInvDuration-.9)*.6;this.player.hpRegen*=.5;}
@@ -301,11 +339,12 @@
     if(this.player){if(this.player._feastShield>this.player.maxHp*.2)this.player._feastShield=this.player.maxHp*.2;this.player.hp=clamp(this.player.hp,0,this.player.maxHp);}
     if(this.enemyProjectiles?.length>PROJECTILE_CAP){let excess=this.enemyProjectiles.length-PROJECTILE_CAP;
       for(const p of this.enemyProjectiles){if(excess<=0)break;if(p.dead||p._combatPersistAfterDeath)continue;p.dead=true;excess--;}}
-    return result;
+    updatePayload.result=result;runHooks("afterUpdate",updatePayload);return result;
   };
 
-  const applyVersion=()=>{const el=document.getElementById("gameVersion");if(el)el.textContent=`VER. ${GAME_VERSION}`;};
+  const applyVersion=()=>{const el=document.getElementById("gameVersion");if(el)el.textContent=`VER. ${window.__VOID_SURVIVORS_VERSION||GAME_VERSION}`;};
   if(document.readyState==="loading")window.addEventListener("DOMContentLoaded",applyVersion,{once:true});else applyVersion();
+  window.addEventListener("load",applyVersion,{once:true});
   if(typeof CONFIG.MAX_ENEMY_PROJECTILES==="number")CONFIG.MAX_ENEMY_PROJECTILES=Math.min(CONFIG.MAX_ENEMY_PROJECTILES,PROJECTILE_CAP);
   if(typeof CONFIG.EXPLOSION_DAMAGE_RATIO==="number")CONFIG.EXPLOSION_DAMAGE_RATIO=Math.min(CONFIG.EXPLOSION_DAMAGE_RATIO,.025);
 

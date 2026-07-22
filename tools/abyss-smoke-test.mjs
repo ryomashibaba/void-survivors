@@ -20,7 +20,7 @@ class FakeElement {
     this.tagName=String(tag).toUpperCase();this.ownerDocument=document;this.children=[];this.parentNode=null;
     this._id='';this._className='';this.classList=new ClassList(this);this.style={setProperty(){}};
     this.dataset={};this.listeners={};this.attributes={};this.textContent='';this._innerHTML='';this.value='';this.checked=false;
-    this.disabled=false;this.tabIndex=0;this.scrollTop=0;this.type='';
+    this.disabled=false;this.hidden=false;this.tabIndex=0;this.scrollTop=0;this.type='';
   }
   set id(value){this._id=String(value||'');if(this.ownerDocument&&this._id)this.ownerDocument.registry.set(this._id,this);} get id(){return this._id;}
   set className(value){this._className=String(value||'');this.classList.setFromString(this._className);} get className(){return this._className;}
@@ -80,7 +80,8 @@ for(const [id,stats,weapons] of [['gameOverScreen','overStats','overWeapons'],['
 add('weaponBar');add('upgradeToast');add('volSlider',{tag:'input'}).value='60';add('resultSkillBtn1');add('resultSkillBtn2');
 // Pre-existing injected UI prevents the integration script from needing an HTML parser.
 add('abyssSettingsScreen');add('abyssRewardScreen');add('rewardChoices');add('rewardTitle');add('rewardKicker');add('rewardDescription');
-add('abyssLayerValue');add('abyssLayerSummary');add('challengeSelect',{tag:'select'});add('challengeSummary');add('abyssLayerUp',{tag:'button'});add('abyssLayerDown',{tag:'button'});
+const abyssLayerCard=add('abyssLayerCard');add('abyssLayerLock',{parent:abyssLayerCard});
+add('abyssLayerValue',{parent:abyssLayerCard});add('abyssLayerSummary',{parent:abyssLayerCard});add('challengeSelect',{tag:'select',parent:abyssLayerCard});add('challengeSummary',{parent:abyssLayerCard});add('abyssLayerUp',{tag:'button',parent:abyssLayerCard});add('abyssLayerDown',{tag:'button',parent:abyssLayerCard});
 for(const id of ['masterVolumeSetting','musicVolumeSetting','sfxVolumeSetting','shakeSetting','effectsSetting','damageTextSetting','flashSetting','contrastSetting','motionSetting','projectileSetting','masterVolumeOut','musicVolumeOut','sfxVolumeOut','shakeOut','settingsCloseBtn'])add(id);
 
 const localStore=new Map();
@@ -113,12 +114,12 @@ class Enemy{constructor(type='normal',x=0,y=0,scale={hp:1,atk:1,speed:1}){Object
 class Boss{constructor(index=0){Object.assign(this,{index,x:2300,y:2100,radius:46,maxHp:1000,hp:1000,atk:20,speed:70,dead:false,contactCd:0,animT:0,spawnAge:0,hitFlash:0,name:'boss'});}update(){}draw(){}onDeath(){this.dead=true;}}
 class Game{
   constructor(){this.records={volume:60,shards:0,totalShards:0,skillTree:{core_awakening:1},challengeBest:{}};this.sound=new SoundManager();this.input={keys:new Set()};this.state='title';this.effects=[];this.enemies=[];this.enemyProjectiles=[];this.damageTexts=[];this.treasures=[];this.gems=[];this.projectiles=[];this.particles=[];this.explosions=[];this.obstacles=[];this.viewW=1280;this.viewH=720;this.elapsed=0;this.currentScale=getTimeScale(0);this.camera={x:0,y:0};this.bossKills=0;this.loadRecords();}
-  loadRecords(){}saveRecords(){localStorage.setItem('void_survivors_records',JSON.stringify(this.records));}getSkillRank(id){return this.records.skillTree[id]||0;}addEffect(effect){this.effects.push(effect);}shake(){}triggerHitFlash(){}
+  loadRecords(){try{Object.assign(this.records,JSON.parse(localStorage.getItem('void_survivors_records')||'{}'));}catch{}}saveRecords(){localStorage.setItem('void_survivors_records',JSON.stringify(this.records));}getSkillRank(id){return this.records.skillTree[id]||0;}addEffect(effect){this.effects.push(effect);}shake(){}triggerHitFlash(){}
   damageEnemy(enemy,damage){if(enemy.dead)return;enemy.hp-=damage;if(enemy.hp<=0)enemy.onDeath(this);}damageBoss(damage){if(!this.boss||this.boss.dead)return;this.boss.hp-=damage;if(this.boss.hp<=0){const boss=this.boss;boss.onDeath(this);this.boss=null;}}
   startGame(){this.player=new Player();this.enemies=[];this.enemyProjectiles=[];this.effects=[];this.treasures=[];this.gems=[];this.damageTexts=[];this.projectiles=[];this.particles=[];this.explosions=[];this.obstacles=[];this.pendingLevelUps=0;this.state='playing';this.elapsed=0;this.currentScale=getTimeScale(0);}
   update(dt){this.elapsed+=dt;this.currentScale=getTimeScale(this.elapsed);for(const enemy of this.enemies)enemy.update(dt,this.player,this.enemies,this.obstacles,this);if(this.boss)this.boss.update(dt,this.player,this.enemies,this.obstacles,this);for(const effect of this.effects)effect.update?.(dt);this.effects=this.effects.filter(effect=>!effect.dead);}
   closeLevelUp(){document.getElementById('levelUpScreen').classList.add('hidden');this.pendingLevelUps=Math.max(0,(this.pendingLevelUps||0)-1);if(this.pendingLevelUps>0)this.openLevelUp();else this.state='playing';}
-  showSystemToast(){}updateWeaponBarDOM(){}updateHUD(){}calculateShardReward(){return 10;}onClear(){this.state='clear';this.showResult(true);}onPlayerDeath(){this.state='gameover';this.showResult(false);}
+  showSystemToast(...args){this.lastToast=args;}updateWeaponBarDOM(){}updateHUD(){}calculateShardReward(){return 10;}onClear(){this.state='clear';this.showResult(true);}onPlayerDeath(){this.state='gameover';this.showResult(false);}
   showResult(clear){document.getElementById(clear?'clearScreen':'gameOverScreen').classList.remove('hidden');}toTitle(){this.state='title';}spawnExpGem(){this.gems.push(new ExpGem());}
   drawGroundCached(){}
 }
@@ -136,19 +137,30 @@ assert.ok(context.SKILL_NODES.length>=30,'new skill tree not installed');
 
 const game=new context.Game();context.window.__game=game;
 for(const handler of windowListeners.DOMContentLoaded||[])handler({type:'DOMContentLoaded'});
+assert.ok(abyssLayerCard.classList.contains('is-locked'),'first-run layer controls should be locked');assert.equal(document.getElementById('challengeSelect').disabled,true,'first-run challenge should be disabled');
 // Settings opened from the title must not make the renderer enter a gameplay-only state.
 document.getElementById('titleSettingsBtn').click();assert.equal(game.state,'title');assert.equal(game._settingsOpen,true);windowObject.dispatchEvent({type:'game-escape'});assert.equal(game._settingsOpen,false);assert.equal(game.state,'title');
 game.startGame();
 assert.equal(game.state,'levelup','origin draft should open immediately');
-let cards=document.querySelectorAll('.abyss-power-card');assert.ok(cards.length>=3,'origin cards missing');cards[0].click();
+let cards=document.querySelectorAll('.abyss-power-card');assert.ok(cards.length>=3,'origin cards missing');
+const rerollsBefore=game.player.rerolls;windowObject.dispatchEvent({type:'keydown',key:'r',repeat:false,target:document.body,preventDefault(){}});assert.equal(game.player.rerolls,rerollsBefore-1,'R should reroll the draft');assert.equal(document.querySelectorAll('.abyss-power-card').length,4,'origin reroll must preserve four choices');
+windowObject.dispatchEvent({type:'keydown',key:'1',repeat:false,target:document.body,preventDefault(){}});
 assert.equal(game.state,'playing');assert.equal(Object.values(game.player.upgradeRanks).reduce((a,b)=>a+b,0),1);
+assert.ok(game.lastToast?.[3]?.includes('Lv.1'),'acquisition toast should show the acquired current rank');assert.ok(!game.lastToast?.[3]?.includes('Lv.2'),'acquisition toast must not show the next rank');
+
+// The first run teaches the three essential actions without pausing play.
+for(const time of [.99,14.99,31.99]){game.elapsed=time;game.state='playing';game.update(.02);assert.equal(game.state,'playing');}
+assert.equal(game.records.onboardingVersion,1,'onboarding completion was not saved');
+
+// Normal drafts guarantee build completion and owned-power growth without duplicates.
+game.player.upgradeRanks.solar_funeral=3;game.player.upgradeRanks.meteor_scripture=2;game.player.evolutionCores=1;game.player._originDraft=false;
+const guaranteed=context.pickUpgradeChoices(game.player,4);assert.equal(new Set(guaranteed.map(item=>item.id)).size,guaranteed.length,'duplicate upgrade cards found');assert.ok(guaranteed.some(item=>item.kind==='evolution'||item.kind==='synergy'),'evolution or synergy was not guaranteed');assert.ok(guaranteed.some(item=>item.kind==='power'&&(game.player.upgradeRanks[item.id]||0)>0&&(game.player.upgradeRanks[item.id]||0)<3),'owned power upgrade was not guaranteed');
 
 // Force and validate evolution.
-game.player.upgradeRanks.solar_funeral=3;game.player.evolutionCores=1;game.player._originDraft=false;
 let pool=context.buildUpgradePool(game.player);const evolution=pool.find(item=>item.id==='evo:solar_funeral');assert.ok(evolution,'evolution choice missing');evolution.apply(game);assert.equal(game.player.powerEvolutions.solar_funeral,true);assert.equal(game.player.evolutionCores,0);
 
 // Force and validate synergy.
-game.player.upgradeRanks.meteor_scripture=2;pool=context.buildUpgradePool(game.player);const synergy=pool.find(item=>item.id==='syn:helios_scripture');assert.ok(synergy,'synergy choice missing');synergy.apply(game);assert.equal(game.player.powerSynergies.helios_scripture,true);
+pool=context.buildUpgradePool(game.player);const synergy=pool.find(item=>item.id==='syn:helios_scripture');assert.ok(synergy,'synergy choice missing');synergy.apply(game);assert.equal(game.player.powerSynergies.helios_scripture,true);
 
 // Boss death must queue and open a unique reward, then return to play.
 game.boss=new context.Boss(0);game.boss.onDeath(game);game.boss=null;game.state='playing';game.update(.016);
@@ -185,11 +197,15 @@ assert.ok(Object.keys(game._runStats.damageBySource).length>=8,'combined power e
 // Every boss variant must enter its own pattern state without throwing.
 game.player.upgradeRanks.time_execution=0;game.player.invBuffTimer=999;
 const bossPatterns=[];
+const bossPhases=[];
+const bossRandomBefore=Math.random;Math.random=()=>.25;
 for(let index=0;index<4;index++){
   game.boss=new context.Boss(index);game.boss.maxHp=game.boss.hp=1e9;game._systemTimeStop=0;game._delayedSystemCasts=[];game.effects=[];game.enemyProjectiles=[];game.enemies=[];game.state='playing';
   for(let step=0;step<90;step++)game.update(.1);
   assert.ok(game.boss?._abyssBoss?.pattern>0,`boss ${index} did not execute a pattern`);bossPatterns.push(game.boss._abyssBoss.pattern);
+  const phases=[game.boss._abyssBoss.phase];game.boss.hp=game.boss.maxHp*.66;game.update(.01);phases.push(game.boss._abyssBoss.phase);game.boss.hp=game.boss.maxHp*.33;game.update(.01);phases.push(game.boss._abyssBoss.phase);assert.equal(phases.join(','),'1,2,3',`boss ${index} phase thresholds failed`);bossPhases.push(phases);
 }
+Math.random=bossRandomBefore;
 game.boss=null;
 
 // All five stage rules must initialize, and stage 3 must produce a nest.
@@ -204,6 +220,17 @@ const treasure=new context.Treasure(game.player.x,game.player.y);treasure.game=g
 assert.equal(game.state,'reward','treasure mutation did not open');const mutationCard=document.querySelector('.abyss-reward-card');assert.ok(mutationCard,'treasure mutation card missing');mutationCard.click();assert.equal(game.state,'playing');
 
 // Save normalization should preserve the legacy key and system data.
-game.saveRecords();const saved=JSON.parse(localStorage.getItem('void_survivors_records'));assert.equal(saved.systemVersion,3);assert.ok(saved.settings);assert.ok('skillTree' in saved);
+game.saveRecords();const saved=JSON.parse(localStorage.getItem('void_survivors_records'));assert.equal(saved.systemVersion,3);assert.equal(saved.onboardingVersion,1);assert.ok(saved.settings);assert.ok('skillTree' in saved);
 
-console.log(JSON.stringify({ok:true,powers:validation.powerCount,synergies:validation.synergyCount,skillNodes:context.SKILL_NODES.length,rewardCards:rewardCards.length,damageSources:Object.keys(game._runStats.damageBySource).length,history:game.records.runHistory.length,bossPatterns,stageTexts,evolutions:Object.keys(game.player.powerEvolutions).length}));
+// Old and corrupt saves must remain loadable through the existing key.
+localStorage.setItem('void_survivors_records',JSON.stringify({bestTime:600,skillTree:{core_awakening:1}}));const migrated=new context.Game();assert.ok(migrated.records.abyssUnlocked>=1,'legacy clear did not unlock abyss controls');
+localStorage.setItem('void_survivors_records','{broken');const recovered=new context.Game();assert.equal(recovered.records.onboardingVersion,0);assert.ok(recovered.records.skillTree,'corrupt save did not recover defaults');
+
+// The combat layer exposes a bounded hook surface and deterministic encounter templates.
+const combatSource=fs.readFileSync(new URL('../assets/js/combat-balance-overhaul.js',import.meta.url),'utf8');vm.runInContext(combatSource,context,{filename:'combat-balance-overhaul.js'});
+for(const hook of ['beforeUpdate','afterUpdate','damageEnemy','damageBoss','onStart','onEnemyDeath'])assert.ok(Array.isArray(context.window.__voidHooks[hook]),`hook missing: ${hook}`);
+let starts=0;context.window.__voidHooks.register('onStart',()=>starts++);const directedGame=new context.Game();context.window.__game=directedGame;directedGame.startGame();assert.equal(starts,1,'onStart hook did not fire');
+const encounterTypes=[];for(const time of [10,30,60,90]){directedGame.elapsed=time;encounterTypes.push(Array.from(context.window.__selectEnemyWaveTypes(directedGame,4)));}
+assert.equal(encounterTypes[0].join(','),'normal,normal,normal,normal');assert.ok(encounterTypes[1].includes('fast'),'30-second scout missing');assert.ok(encounterTypes[2].includes('heavy'),'60-second heavy missing');assert.ok(encounterTypes[3].some(type=>type!=='normal'),'stage encounter template missing');
+
+console.log(JSON.stringify({ok:true,powers:validation.powerCount,synergies:validation.synergyCount,skillNodes:context.SKILL_NODES.length,rewardCards:rewardCards.length,damageSources:Object.keys(game._runStats.damageBySource).length,history:game.records.runHistory.length,bossPatterns,bossPhases,stageTexts,evolutions:Object.keys(game.player.powerEvolutions).length,encounterTypes}));

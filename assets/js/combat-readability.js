@@ -414,7 +414,7 @@
     const version = document.getElementById("gameVersion");
     const dock = document.getElementById("pauseBtnWrap");
     if (!version) return;
-    version.textContent = `VER. ${READABILITY_VERSION}`;
+    version.textContent = `VER. ${window.__VOID_SURVIVORS_VERSION || READABILITY_VERSION}`;
     version.title = "VOID SURVIVORS build version";
     if (dock){
       const help = document.getElementById("controlsHelpBtn");

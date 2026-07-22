@@ -545,6 +545,7 @@
             <button id="abyssLayerUp" type="button" aria-label="深淵層を上げる">＋</button>
           </div>
         </div>
+        <div id="abyssLayerLock" class="abyss-layer-lock" hidden>初回クリア後に深淵層と追加チャレンジが解放されます。</div>
         <div id="abyssLayerSummary" class="abyss-layer-summary"></div>
         <label class="challenge-select-label" for="challengeSelect">追加チャレンジ</label>
         <select id="challengeSelect" class="challenge-select"></select>
@@ -664,11 +665,14 @@
     const raw=rawSavedRecords();
     previousLoadRecords.call(this);
     this.records.settings=normalizeSettings(raw.settings||this.records.settings);
-    this.records.abyssUnlocked=clamp(Math.floor(finite(raw.abyssUnlocked,0)),0,MAX_ABYSS_LAYER);
+    const legacyClear=finite(this.records.bestTime,0)>=CONFIG.GAME_TIME-1;
+    this.records.abyssUnlocked=clamp(Math.max(Math.floor(finite(raw.abyssUnlocked,0)),legacyClear?1:0),0,MAX_ABYSS_LAYER);
     this.records.abyssSelected=clamp(Math.floor(finite(raw.abyssSelected,0)),0,this.records.abyssUnlocked);
     this.records.challengeSelected=CHALLENGES[raw.challengeSelected]?raw.challengeSelected:"none";
+    if(this.records.abyssUnlocked<=0)this.records.challengeSelected="none";
     this.records.challengeBest=raw.challengeBest&&typeof raw.challengeBest==="object"?raw.challengeBest:{};
     this.records.runHistory=Array.isArray(raw.runHistory)?raw.runHistory.slice(0,MAX_RUN_HISTORY):[];
+    this.records.onboardingVersion=clamp(Math.floor(finite(raw.onboardingVersion,0)),0,1);
     this.records.systemVersion=Math.floor(finite(raw.systemVersion,0));
 
     if(this.records.systemVersion<SYSTEM_VERSION){
@@ -689,6 +693,7 @@
     this.records.settings=normalizeSettings(this.records.settings);
     this.records.abyssUnlocked=clamp(Math.floor(finite(this.records.abyssUnlocked,0)),0,MAX_ABYSS_LAYER);
     this.records.abyssSelected=clamp(Math.floor(finite(this.records.abyssSelected,0)),0,this.records.abyssUnlocked);
+    this.records.onboardingVersion=clamp(Math.floor(finite(this.records.onboardingVersion,0)),0,1);
     if(!CHALLENGES[this.records.challengeSelected])this.records.challengeSelected="none";
     return previousSaveRecords.call(this);
   };
@@ -756,6 +761,11 @@
 
   function updateTitleControls(game){
     if(!game?.records)return;
+    const unlocked=(game.records.abyssUnlocked||0)>0||finite(game.records.bestTime,0)>=CONFIG.GAME_TIME-1;
+    const card=document.getElementById("abyssLayerCard");
+    const lock=document.getElementById("abyssLayerLock");
+    if(card)card.classList.toggle("is-locked",!unlocked);
+    if(lock)lock.hidden=unlocked;
     const layer=clamp(Math.floor(finite(game.records.abyssSelected,0)),0,game.records.abyssUnlocked||0);
     game.records.abyssSelected=layer;
     const value=document.getElementById("abyssLayerValue");
@@ -763,7 +773,7 @@
     if(value)value.textContent=String(layer);
     if(summary){
       const hp=Math.round(layer*12),atk=Math.round(layer*8),reward=Math.round(layer*10);
-      summary.textContent=layer===0?"初回クリア前の標準層。":"敵HP +"+hp+"% / 敵攻撃 +"+atk+"% / 深淵片 +"+reward+"%";
+      summary.textContent=!unlocked?"標準航行で10分間生存し、深淵への入口を開け。":layer===0?"標準層。敵補正なし。":"敵HP +"+hp+"% / 敵攻撃 +"+atk+"% / 深淵片 +"+reward+"%";
     }
     const select=document.getElementById("challengeSelect");
     if(select){
@@ -773,14 +783,15 @@
         }
       }
       select.value=game.records.challengeSelected||"none";
+      select.disabled=!unlocked;
     }
     const challenge=CHALLENGES[game.records.challengeSelected]||CHALLENGES.none;
     const challengeSummary=document.getElementById("challengeSummary");
-    if(challengeSummary)challengeSummary.textContent=challenge.desc;
+    if(challengeSummary)challengeSummary.textContent=unlocked?challenge.desc:"追加チャレンジは初回クリア後に選択できます。";
     const up=document.getElementById("abyssLayerUp");
     const down=document.getElementById("abyssLayerDown");
-    if(up)up.disabled=layer>=game.records.abyssUnlocked;
-    if(down)down.disabled=layer<=0;
+    if(up)up.disabled=!unlocked||layer>=game.records.abyssUnlocked;
+    if(down)down.disabled=!unlocked||layer<=0;
   }
 
   function bindInjectedUi(){
@@ -822,6 +833,21 @@
     for(const id of ["masterVolumeSetting","musicVolumeSetting","sfxVolumeSetting","shakeSetting","effectsSetting","damageTextSetting","flashSetting","contrastSetting","motionSetting","projectileSetting"]){
       document.getElementById(id)?.addEventListener("input",saveSetting);
       document.getElementById(id)?.addEventListener("change",saveSetting);
+    }
+    if(!window.__abyssLevelHotkeysBound){
+      window.__abyssLevelHotkeysBound=true;
+      window.addEventListener("keydown",event=>{
+        const game=getGame();
+        if(!game||game.state!=="levelup"||event.repeat)return;
+        const target=event.target;
+        if(target&&["INPUT","SELECT","TEXTAREA"].includes(target.tagName))return;
+        const index=Number(event.key)-1;
+        if(index>=0&&index<4&&game._levelUpSelectActions?.[index]){
+          event.preventDefault();game._levelUpSelectActions[index]();
+        }else if(event.key.toLowerCase()==="r"&&game._levelUpRerollAction){
+          event.preventDefault();game._levelUpRerollAction();
+        }
+      });
     }
   }
 
@@ -1591,7 +1617,11 @@
   Boss.prototype.update=function(dt,player,enemies,obstacles,game){
     this.animT+=dt;this.spawnAge+=dt;if(this.hitFlash>0)this.hitFlash-=dt;
     const state=initBossSystem(this,game);if(game._systemTimeStop>0)return;
-    const hpRatio=this.hp/Math.max(1,this.maxHp),phase=hpRatio>.67?1:hpRatio>.34?2:3;state.phase=phase;
+    const hpRatio=this.hp/Math.max(1,this.maxHp),phase=hpRatio>.67?1:hpRatio>.34?2:3;
+    if(phase!==state.phase){
+      state.phase=phase;game._bossClarityTimer=.75;
+      game.showSystemToast("PHASE",this.name,phase===2?"攻撃パターンが加速した。":"最終局面。固有攻撃が最大強度へ移行。",`HP ${Math.round(hpRatio*100)}% / PHASE ${phase}`,phase===2?"#ffd447":"#ff5268");
+    }
 
     if(state.chargeTime>0){
       state.chargeTime-=dt;const nx=this.x+state.chargeDir.x*this.speed*(6.2+phase*.6)*dt,ny=this.y+state.chargeDir.y*this.speed*(6.2+phase*.6)*dt;if(!circleHitObstacle(nx,ny,this.radius,obstacles)){this.x=nx;this.y=ny;}else state.chargeTime=0;if(Math.random()<.22)game.addEffect(new SystemMine(game,this.x,this.y,this.atk*.48,"#ff5268"));bossContact(this,player,game,dt,1.35);return;
@@ -1866,14 +1896,23 @@
 
   pickUpgradeChoices=function(player,count){
     const pool=buildUpgradePool(player),picked=[];
-    const priority=pool.filter(item=>item.kind==="evolution"||item.kind==="synergy");
-    if(priority.length&&Math.random()<.78)picked.push(choice(priority));
+    const weightedChoice=list=>{
+      let total=list.reduce((sum,item)=>sum+(item.weight||1),0),roll=Math.random()*total;
+      for(const item of list){roll-=item.weight||1;if(roll<=0)return item;}
+      return list[list.length-1]||null;
+    };
+    const addPicked=item=>{if(item&&!picked.some(entry=>entry.id===item.id))picked.push(item);};
+
+    if(!player._originDraft){
+      const priority=pool.filter(item=>item.kind==="evolution"||item.kind==="synergy");
+      addPicked(weightedChoice(priority));
+      const ownedRanks=pool.filter(item=>item.kind==="power"&&rankOf(player,item.id)>0);
+      addPicked(weightedChoice(ownedRanks));
+    }
     while(picked.length<count){
-      const candidates=pool.filter(item=>!picked.includes(item));if(!candidates.length)break;
+      const candidates=pool.filter(item=>!picked.some(entry=>entry.id===item.id));if(!candidates.length)break;
       const represented=new Set(picked.map(item=>item.category));const diverse=candidates.filter(item=>!represented.has(item.category));const list=diverse.length?diverse:candidates;
-      let total=list.reduce((sum,item)=>sum+(item.weight||1),0),roll=Math.random()*total,selected=list[list.length-1];
-      for(const item of list){roll-=item.weight||1;if(roll<=0){selected=item;break;}}
-      picked.push(selected);
+      addPicked(weightedChoice(list));
     }
     return picked;
   };
@@ -1887,22 +1926,54 @@
     return{now:current?`Lv.${current}｜${powerLines(player,id,current).join(" / ")}`:"未取得",after:`Lv.${next}｜${powerLines(player,id,next).join(" / ")}`};
   };
 
+  function acquiredSummary(item,player){
+    if(item.kind==="power"){
+      const rank=rankOf(player,item.id);
+      return `Lv.${rank}｜${powerLines(player,item.id,rank).join(" / ")}`;
+    }
+    if(item.kind==="evolution")return `進化：${item.name}`;
+    if(item.kind==="synergy")return `共鳴：${item.name}`;
+    return getUpgradePreview(item.id,player).after;
+  }
+
+  function choiceTags(player,item){
+    if(item.kind==="evolution")return["進化核 1","枠維持","Lv.3到達"];
+    if(item.kind==="synergy"){
+      const synergy=SYNERGIES[item.sourceId];
+      return["共鳴",...(synergy?.powers||[]).map(id=>POWER_CATALOG[id]?.name).filter(Boolean)];
+    }
+    if(item.kind!=="power")return["ビルド補助"];
+    const current=rankOf(player,item.id),tags=[current?"権能枠を維持":`新規 ${powerSlotsUsed(player)+1}/${player.powerSlotLimit||BASE_POWER_SLOTS}`];
+    if(current>=2)tags.push("進化候補");
+    const partners=[];
+    for(const synergy of Object.values(SYNERGIES)){
+      if(!synergy.powers.includes(item.id))continue;
+      const other=synergy.powers.find(id=>id!==item.id);
+      if(other&&rankOf(player,other)>0)partners.push(POWER_CATALOG[other].name);
+    }
+    if(partners.length)tags.push(`共鳴候補 ${partners.join("・")}`);
+    return tags;
+  }
+
   function renderLevelChoices(game,choices){
     const wrap=document.getElementById("upgradeChoices");if(!wrap)return;wrap.innerHTML="";
     choices.forEach((item,index)=>{
-      const preview=getUpgradePreview(item.id,game.player),card=document.createElement("div");card.className=`upgrade-card abyss-power-card kind-${item.kind}`;card.style.setProperty("--card-color",item.color);card.dataset.index=String(index+1).padStart(2,"0");card.dataset.rankLabel=item.trigger;card.tabIndex=0;card.setAttribute("role","button");
-      card.innerHTML=`<div class="power-category">${item.kind==="evolution"?"EVOLUTION":item.kind==="synergy"?"RESONANCE":CATEGORY_INFO[item.category]?.label||"SYSTEM"}</div><div class="upgrade-icon">${item.icon}</div><div class="upgrade-name">${item.name}</div><div class="power-trigger">${item.trigger}</div><div class="upgrade-desc">${item.desc}</div><div class="upgrade-current"><span class="now">現在｜${preview.now}</span><span class="after">取得後｜${preview.after}</span></div>`;
-      if(item.kind==="power"&&game.player.banishes>0&&!game.player._originDraft){const banish=document.createElement("button");banish.type="button";banish.className="banish-choice";banish.textContent=`除外 ${game.player.banishes}`;banish.addEventListener("click",event=>{event.stopPropagation();if(game.player.banishes<=0)return;game.player.banishes--;game.player.bannedPowers.add(item.id);game._runStats.banishes++;renderLevelChoices(game,pickUpgradeChoices(game.player,3+(game.player.levelUpChoiceBonus||0)));});card.appendChild(banish);}
-      const select=()=>{if(game._levelUpSelectionLocked)return;game._levelUpSelectionLocked=true;item.apply(game);game.player._originDraft=false;game.updateWeaponBarDOM();updateBuildHud(game);game.showSystemToast(item.icon,item.name,item.desc,`取得後：${getUpgradePreview(item.id,game.player).after}`,item.color);game.closeLevelUp();};
-      card.addEventListener("click",select);card.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();select();}});wrap.appendChild(card);
+      const canBanish=item.kind==="power"&&game.player.banishes>0&&!game.player._originDraft;
+      const preview=getUpgradePreview(item.id,game.player),card=document.createElement(canBanish?"div":"button");if(!canBanish)card.type="button";card.className=`upgrade-card abyss-power-card kind-${item.kind}`;card.style.setProperty("--card-color",item.color);card.dataset.index=String(index+1).padStart(2,"0");card.dataset.rankLabel=item.trigger;
+      const tags=choiceTags(game.player,item).map(value=>`<span>${value}</span>`).join("");
+      card.innerHTML=`<div class="power-category">${item.kind==="evolution"?"EVOLUTION":item.kind==="synergy"?"RESONANCE":CATEGORY_INFO[item.category]?.label||"SYSTEM"}</div><div class="upgrade-icon">${item.icon}</div><div class="upgrade-name">${item.name}</div><div class="power-build-tags">${tags}</div><div class="power-trigger">${item.trigger}</div><div class="upgrade-desc">${item.desc}</div><div class="upgrade-current"><span class="now">現在｜${preview.now}</span><span class="after">取得後｜${preview.after}</span></div>`;
+      if(canBanish){card.tabIndex=0;card.setAttribute("role","button");const banish=document.createElement("button");banish.type="button";banish.className="banish-choice";banish.textContent=`除外 ${game.player.banishes}`;banish.addEventListener("click",event=>{event.stopPropagation();if(game.player.banishes<=0)return;game.player.banishes--;game.player.bannedPowers.add(item.id);game._runStats.banishes++;renderLevelChoices(game,pickUpgradeChoices(game.player,3+(game.player.levelUpChoiceBonus||0)));});card.appendChild(banish);}
+      const select=()=>{if(game._levelUpSelectionLocked)return;game._levelUpSelectionLocked=true;item.apply(game);game.player._originDraft=false;game.updateWeaponBarDOM();updateBuildHud(game);game.showSystemToast(item.icon,item.name,item.desc,`現在：${acquiredSummary(item,game.player)}`,item.color);game.closeLevelUp();};
+      game._levelUpSelectActions[index]=select;
+      card.addEventListener("click",select);if(canBanish)card.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();select();}});wrap.appendChild(card);
     });
 
     const controls=document.createElement("div");controls.className="levelup-controls";
-    const reroll=document.createElement("button");reroll.type="button";reroll.className="levelup-reroll";reroll.disabled=game.player.rerolls<=0;reroll.textContent=`↻ リロール ${game.player.rerolls}`;reroll.addEventListener("click",()=>{if(game.player.rerolls<=0)return;game.player.rerolls--;game._runStats.rerolls++;renderLevelChoices(game,pickUpgradeChoices(game.player,3+(game.player.levelUpChoiceBonus||0)));});controls.appendChild(reroll);wrap.appendChild(controls);
+    const reroll=document.createElement("button");reroll.type="button";reroll.className="levelup-reroll";reroll.disabled=game.player.rerolls<=0;reroll.textContent=`↻ リロール ${game.player.rerolls} [R]`;game._levelUpRerollAction=()=>{if(game.player.rerolls<=0)return;game.player.rerolls--;game._runStats.rerolls++;const count=game.player._originDraft?4:3+(game.player.levelUpChoiceBonus||0);renderLevelChoices(game,pickUpgradeChoices(game.player,count));};reroll.addEventListener("click",game._levelUpRerollAction);controls.appendChild(reroll);wrap.appendChild(controls);
   }
 
   Game.prototype.openLevelUp=function(){
-    this.input.keys.clear();this.state="levelup";this._levelUpSelectionLocked=false;
+    this.input.keys.clear();this.state="levelup";this._levelUpSelectionLocked=false;this._levelUpSelectActions=[];this._levelUpRerollAction=null;
     const count=this.player._originDraft?4:3+(this.player.levelUpChoiceBonus||0),choices=pickUpgradeChoices(this.player,count);this._levelUpChoices=choices;
     const title=document.querySelector("#levelUpScreen .upgrade-title");if(title)title.textContent=this.player._originDraft?"起源権能を選択":"レベルアップ！強化を選択";
     renderLevelChoices(this,choices);document.getElementById("levelUpScreen").classList.remove("hidden");this.sound.levelUp();
@@ -2014,6 +2085,7 @@
   const baseAddEffect=Game.prototype.addEffect;
   Game.prototype.addEffect=function(effect){
     if(!effect)return;const density=effectDensity(this);
+    if(this._bossClarityTimer>0&&!effect.critical)return;
     if(!effect.critical&&density==="low"&&this.effects?.length>CONFIG.MAX_EFFECTS*.45&&Math.random()<.5)return;
     return baseAddEffect.call(this,effect);
   };
@@ -2052,9 +2124,10 @@
 
   const baseStartGame=Game.prototype.startGame;
   Game.prototype.startGame=function(){
+    const recordBaseline={highScore:finite(this.records?.highScore,0),bestTime:finite(this.records?.bestTime,0),maxKills:finite(this.records?.maxKills,0)};
     const result=baseStartGame.call(this);
     this._runStats=newRunStats();this._resultRecorded=false;this._powerTimers={};this._delayedSystemCasts=[];this._systemTimeStop=0;this._timeBurstPending=false;this._systemStageIndex=-1;this._stageRuleTimer=0;this._stageDamageMul=1;this._stageCooldownMul=1;this._stageXpMul=1;this._stageSpawnMul=1;this._pendingBossReward=null;this._pendingTreasureMutation=false;this._lastMutationTime=-999;this._runEnemyHpBonus=1;
-    applyPermanentBuild(this);this.player._originDraft=true;this.player.lastMove={x:0,y:0};window.__recentUpgrades=[];this._abyssMusic=new AbyssMusic(this);this.updateWeaponBarDOM();updateBuildHud(this);setStageHud(this,0);
+    applyPermanentBuild(this);this.player._originDraft=true;this.player.lastMove={x:0,y:0};window.__recentUpgrades=[];this._abyssMusic=new AbyssMusic(this);this._runRecordBaseline=recordBaseline;this._onboardingStep=this.records.onboardingVersion>=1?3:0;this.updateWeaponBarDOM();updateBuildHud(this);setStageHud(this,0);
     this.pendingLevelUps=(this.pendingLevelUps||0)+1;if(this.state==="playing")this.openLevelUp();
     if(this.records.lastSystemRefund>0){this.showSystemToast("◇","旧回路を返還","廃止された旧ノードの投資を自動返還しました。",`返還 +${this.records.lastSystemRefund} 深淵片`,"#ffd447");this.records.lastSystemRefund=0;this.saveRecords();}
     return result;
@@ -2078,6 +2151,19 @@
         }
       }
       if(this.player.hp>oldHp&&this._runStats)this._runStats.healing+=this.player.hp-oldHp;
+      if(this._onboardingStep<3){
+        const tips=[
+          {at:1,icon:"↗",name:"移動",desc:"WASD または矢印キーで危険地帯から離脱。",effect:"止まらず、敵の包囲に出口を作る。"},
+          {at:15,icon:"◇",name:"自動攻撃と経験値",desc:"攻撃は自動。落ちた経験値を回収して権能を育てる。",effect:"敵へ近づくより、回収経路を選ぶ。"},
+          {at:32,icon:"!",name:"危険予告",desc:"色付きの線・円・十字は敵攻撃の予告。",effect:"エフェクトではなく予告範囲の外へ回避。"}
+        ];
+        const tip=tips[this._onboardingStep];
+        if(tip&&this.elapsed>=tip.at){
+          this.showSystemToast(tip.icon,tip.name,tip.desc,tip.effect,"#65d9ff");this._onboardingStep++;
+          if(this._onboardingStep>=3){this.records.onboardingVersion=1;this.saveRecords();}
+        }
+      }
+      if(this._bossClarityTimer>0)this._bossClarityTimer=Math.max(0,this._bossClarityTimer-dt);
       this._abyssMusic?.update(dt);processPendingModal(this);
       this._buildHudTimer=(this._buildHudTimer||0)-dt;if(this._buildHudTimer<=0){this._buildHudTimer=.25;updateBuildHud(this);}
     }
@@ -2094,11 +2180,18 @@
     return baseOnClear.call(this);
   };
 
-  function resultAnalyticsHtml(game){
+  function resultAnalyticsHtml(game,clear){
     const stats=game._runStats||newRunStats(),entries=Object.entries(stats.damageBySource).sort((a,b)=>b[1]-a[1]),total=entries.reduce((sum,item)=>sum+item[1],0),top=entries.slice(0,8);
     const damageRows=top.length?top.map(([source,damage])=>`<div class="damage-source-row"><span>${sourceLabel(source)}</span><span>${Math.round(damage).toLocaleString()} <small>${total?Math.round(damage/total*100):0}%</small></span></div>`).join(""):"<div class=\"damage-source-empty\">ダメージ記録なし</div>";
-    const evolved=stats.evolutions.map(id=>EVOLUTIONS[id]?.name).filter(Boolean).join(" / ")||"なし",synergy=stats.synergies.map(id=>SYNERGIES[id]?.name).filter(Boolean).join(" / ")||"なし";
-    return `<section class="run-analysis"><header><strong>RUN ANALYSIS</strong><span>深淵層 ${selectedLayer(game)} / ${CHALLENGES[game.records.challengeSelected]?.name||"標準航行"}</span></header><div class="analysis-grid"><div><h3>権能別ダメージ</h3>${damageRows}</div><div><h3>戦闘記録</h3><div class="analysis-stat"><span>総ダメージ</span><b>${Math.round(total).toLocaleString()}</b></div><div class="analysis-stat"><span>被ダメージ</span><b>${Math.round(stats.damageTaken).toLocaleString()}</b></div><div class="analysis-stat"><span>回復量</span><b>${Math.round(stats.healing).toLocaleString()}</b></div><div class="analysis-stat"><span>宝箱 / 増殖巣</span><b>${stats.treasures} / ${stats.stageNests}</b></div><div class="analysis-stat"><span>進化</span><b>${evolved}</b></div><div class="analysis-stat"><span>共鳴</span><b>${synergy}</b></div></div></div></section>`;
+    const evolved=Object.keys(game.player.powerEvolutions||{}).map(id=>EVOLUTIONS[id]?.name).filter(Boolean).join(" / ")||"なし",synergy=Object.keys(game.player.powerSynergies||{}).map(id=>SYNERGIES[id]?.name).filter(Boolean).join(" / ")||"なし";
+    const baseline=game._runRecordBaseline||{},records=[];
+    if(game.player.score>finite(baseline.highScore,0))records.push("ハイスコア");
+    if(game.elapsed>finite(baseline.bestTime,0))records.push("生存時間");
+    if(game.player.kills>finite(baseline.maxKills,0))records.push("撃破数");
+    const affordable=SKILL_NODES.find(node=>{const rank=game.getSkillRank?.(node.id)||0,cost=node.costs?.[rank];return rank<(node.max||1)&&Number.isFinite(cost)&&cost<=finite(game.records.shards,0)&&game.skillRequirementsMet?.(node);});
+    const challengeName=CHALLENGES[game.records.challengeSelected]?.name||"標準航行",challengeDepth=finite(game.records.challengeBest?.[game.records.challengeSelected],-1);
+    const nextGoal=affordable?`星座盤「${affordable.name}」を取得可能`:clear?`深淵層 ${Math.min(MAX_ABYSS_LAYER,selectedLayer(game)+1)}へ挑戦可能`:`あと ${Math.max(0,Math.ceil(CONFIG.GAME_TIME-game.elapsed))}秒生存で初回クリア`;
+    return `<section class="run-analysis"><header><strong>RUN ANALYSIS</strong><span>深淵層 ${selectedLayer(game)} / ${challengeName}</span></header><div class="analysis-grid"><div><h3>権能別ダメージ</h3>${damageRows}</div><div><h3>戦闘記録</h3><div class="analysis-stat"><span>総ダメージ</span><b>${Math.round(total).toLocaleString()}</b></div><div class="analysis-stat"><span>被ダメージ</span><b>${Math.round(stats.damageTaken).toLocaleString()}</b></div><div class="analysis-stat"><span>回復量</span><b>${Math.round(stats.healing).toLocaleString()}</b></div><div class="analysis-stat"><span>宝箱 / 増殖巣</span><b>${stats.treasures} / ${stats.stageNests}</b></div><div class="analysis-stat"><span>進化</span><b>${evolved}</b></div><div class="analysis-stat"><span>共鳴</span><b>${synergy}</b></div><div class="analysis-stat"><span>チャレンジ最高深度</span><b>${challengeDepth>=0?challengeDepth:"未記録"}</b></div></div></div><div class="run-next-goal"><span>${records.length?`NEW RECORD｜${records.join("・")}`:"RUN COMPLETE"}</span><strong>${nextGoal}</strong></div></section>`;
   }
 
   function recordRunHistory(game,clear){
@@ -2108,7 +2201,7 @@
   }
 
   const baseShowResult=Game.prototype.showResult;
-  Game.prototype.showResult=function(clear){baseShowResult.call(this,clear);recordRunHistory(this,clear);const panel=document.querySelector(`#${clear?"clearScreen":"gameOverScreen"} .title-block`);if(panel){panel.querySelector(".run-analysis")?.remove();panel.querySelector(".result-weapons")?.insertAdjacentHTML("afterend",resultAnalyticsHtml(this));}};
+  Game.prototype.showResult=function(clear){baseShowResult.call(this,clear);recordRunHistory(this,clear);const panel=document.querySelector(`#${clear?"clearScreen":"gameOverScreen"} .title-block`);if(panel){panel.querySelector(".run-analysis")?.remove();panel.querySelector(".result-weapons")?.insertAdjacentHTML("afterend",resultAnalyticsHtml(this,clear));}};
 
   const baseToTitle=Game.prototype.toTitle;
   Game.prototype.toTitle=function(){this._abyssMusic?.stop();const result=baseToTitle.call(this);updateTitleControls(this);return result;};

@@ -417,7 +417,7 @@
   function installVersionOverride(){
     const apply = ()=>{
       const version = document.getElementById("gameVersion");
-      if (version) version.textContent = `VER. ${GAME_VERSION}`;
+      if (version) version.textContent = `VER. ${window.__VOID_SURVIVORS_VERSION || GAME_VERSION}`;
     };
     apply();
     setTimeout(apply,0);

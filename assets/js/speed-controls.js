@@ -175,7 +175,7 @@
 
     const version = document.createElement("div");
     version.id = "gameVersion";
-    version.textContent = `VER. ${GAME_VERSION}`;
+    version.textContent = `VER. ${window.__VOID_SURVIVORS_VERSION || GAME_VERSION}`;
     document.body.appendChild(version);
   }
 
