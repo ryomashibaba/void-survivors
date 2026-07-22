@@ -280,13 +280,13 @@ class DamageText{
     ctx.rotate(this.rot);
     ctx.globalAlpha = a;
     if (this.crit){
-      ctx.font = `bold ${Math.round(62*this.amountScale)}px sans-serif`;
+      ctx.font = `bold ${Math.round(186*this.amountScale)}px sans-serif`;
       ctx.shadowColor = this.color;
       ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
     } else {
-      ctx.font = `bold ${Math.round(38*this.amountScale)}px sans-serif`;
+      ctx.font = `bold ${Math.round(114*this.amountScale)}px sans-serif`;
       ctx.shadowColor = this.color;
       ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 1;
