@@ -1,0 +1,596 @@
+/* VOID SURVIVORS / COMBAT READABILITY PASS
+   Combat information is divided into: always visible, transient, and on-demand. */
+:root{
+  --hud-ink:#100b24;
+  --hud-paper:#fff7dc;
+  --hud-paper-solid:#fffdf2;
+  --hud-danger:#ff5268;
+  --hud-reward:#ffd447;
+  --hud-system:#65d9ff;
+  --hud-abyss:#b45cff;
+  --hud-heal:#42e8bd;
+  --hud-shadow:rgba(8,7,25,.72);
+  --hud-edge:18px;
+  --hud-small-border:2px;
+}
+
+#hud{
+  font-family:"Arial Black","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif!important;
+}
+#hud .clickable,
+#buildPanelToggle,
+#controlsHelpBtn{pointer-events:auto;}
+
+/* ============================== VITALS ============================== */
+#topLeftHud{
+  top:var(--hud-edge)!important;
+  left:var(--hud-edge)!important;
+  width:min(320px,34vw)!important;
+  min-height:86px;
+  padding:11px 12px 10px 68px!important;
+  color:var(--hud-ink)!important;
+  background:rgba(255,253,242,.96)!important;
+  border:2px solid var(--hud-ink)!important;
+  box-shadow:5px 5px 0 rgba(81,100,255,.82)!important;
+  transform:none!important;
+  clip-path:polygon(0 9px,9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%);
+}
+#topLeftHud::before{
+  content:"VITAL / FRAME";
+  position:absolute;
+  left:70px;
+  top:7px;
+  color:#6e6477;
+  font:900 8px/1 monospace;
+  letter-spacing:1.3px;
+}
+#topLeftHud .lv-badge{
+  position:absolute!important;
+  left:10px;
+  top:10px;
+  width:48px;
+  min-width:48px!important;
+  height:46px;
+  margin:0!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center;
+  border:2px solid var(--hud-ink)!important;
+  box-shadow:3px 3px 0 var(--hud-ink)!important;
+  transform:rotate(-2deg)!important;
+  background:var(--hud-heal)!important;
+  font-size:12px!important;
+  line-height:1!important;
+}
+#topLeftHud .bar-outer{
+  height:20px!important;
+  margin:15px 0 7px!important;
+  border:2px solid var(--hud-ink)!important;
+  background:#d8cfad!important;
+}
+#topLeftHud .bar-outer:last-child{
+  height:10px!important;
+  margin:0!important;
+}
+#topLeftHud .bar-outer:last-child::after{
+  content:"EXP";
+  position:absolute;
+  left:-38px;
+  top:-2px;
+  color:#6e6477;
+  font:900 8px/10px monospace;
+  letter-spacing:.6px;
+}
+#topLeftHud .bar-label,
+#topLeftHud .bar-value{
+  top:0!important;
+  font:1000 10px/16px monospace!important;
+}
+#topLeftHud .bar-label{left:6px!important;}
+#topLeftHud .bar-value{right:6px!important;}
+#topLeftHud .hp-inner{background:var(--hud-danger)!important;}
+#topLeftHud .exp-inner{background:var(--hud-reward)!important;}
+
+/* ============================== RUN STATUS ============================== */
+#topRightHud{
+  top:var(--hud-edge)!important;
+  right:var(--hud-edge)!important;
+  width:270px;
+  display:grid!important;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  padding:10px 11px 9px!important;
+  text-align:left!important;
+  color:var(--hud-ink)!important;
+  background:rgba(255,253,242,.96)!important;
+  border:2px solid var(--hud-ink)!important;
+  box-shadow:-5px 5px 0 rgba(255,82,104,.78)!important;
+  transform:none!important;
+  font:900 9px/1.2 monospace!important;
+  letter-spacing:.2px!important;
+}
+#topRightHud::before{
+  content:"RUN TELEMETRY";
+  grid-column:1/-1;
+  padding:0 0 6px;
+  color:#6e6477;
+  font:900 8px/1 monospace;
+  letter-spacing:1.3px;
+}
+#topRightHud>div{
+  min-height:35px;
+  margin:0!important;
+  padding:5px 7px;
+  border-top:1px solid rgba(16,11,36,.22);
+}
+#topRightHud>div:nth-of-type(odd){border-right:1px solid rgba(16,11,36,.22);}
+#topRightHud .val,
+#topRightHud #elapsedVal{
+  display:block;
+  margin-top:3px;
+  color:var(--hud-ink)!important;
+  font:1000 17px/1 monospace!important;
+}
+#topRightHud #timerVal{color:#384dff!important;}
+#topRightHud #timerVal.warn{color:var(--hud-danger)!important;}
+#topRightHud #stageVal{
+  display:block;
+  margin-top:4px;
+  color:#756a7d!important;
+  font:900 8px/1 monospace!important;
+}
+
+#buildStatusHud{
+  top:112px!important;
+  right:var(--hud-edge)!important;
+  max-width:270px!important;
+  gap:4px!important;
+  justify-content:flex-end!important;
+}
+#buildStatusHud span{
+  padding:4px 6px!important;
+  color:var(--hud-ink)!important;
+  background:rgba(255,253,242,.94)!important;
+  border:1px solid var(--hud-ink)!important;
+  box-shadow:2px 2px 0 var(--hud-reward)!important;
+  font:1000 8px/1 monospace!important;
+}
+#buildStatusHud span:nth-child(2){box-shadow:2px 2px 0 var(--hud-abyss)!important;}
+#buildStatusHud span:nth-child(3){box-shadow:2px 2px 0 var(--hud-system)!important;}
+
+/* Stage rules stay compact; text expands only when the rule changes or is inspected. */
+#stageRuleHud{
+  pointer-events:auto!important;
+  top:var(--hud-edge)!important;
+  left:50%!important;
+  width:min(300px,30vw)!important;
+  min-height:46px!important;
+  grid-template-columns:34px minmax(0,1fr)!important;
+  gap:8px!important;
+  padding:6px 10px!important;
+  color:var(--hud-ink)!important;
+  background:rgba(255,253,242,.94)!important;
+  border:2px solid var(--hud-ink)!important;
+  box-shadow:4px 4px 0 rgba(180,92,255,.68)!important;
+  transition:width .18s ease,background .18s ease,transform .18s ease!important;
+}
+#stageRuleIcon{
+  width:32px!important;
+  height:32px!important;
+  border:2px solid var(--hud-ink)!important;
+  font-size:17px!important;
+}
+#stageRuleHud strong{margin:0!important;font-size:11px!important;line-height:1.2!important;}
+#stageRuleHud small{
+  display:block!important;
+  max-height:0;
+  margin:0;
+  overflow:hidden;
+  opacity:0;
+  color:#564c61!important;
+  font:800 9px/1.35 "Yu Gothic UI",sans-serif!important;
+  transition:max-height .18s ease,opacity .18s ease,margin .18s ease;
+}
+#stageRuleHud.is-expanded,
+#stageRuleHud:hover,
+#stageRuleHud:focus-within{
+  width:min(470px,42vw)!important;
+  background:var(--hud-paper-solid)!important;
+}
+#stageRuleHud.is-expanded small,
+#stageRuleHud:hover small,
+#stageRuleHud:focus-within small{
+  max-height:42px;
+  margin-top:3px;
+  opacity:1;
+}
+
+#bossBarWrap{
+  top:76px!important;
+  width:min(520px,43vw)!important;
+}
+#bossName{
+  margin-bottom:4px!important;
+  padding:5px 10px!important;
+  border-width:2px!important;
+  box-shadow:3px 3px 0 var(--hud-danger)!important;
+  font-size:11px!important;
+}
+#bossBarOuter{height:16px!important;border-width:2px!important;box-shadow:4px 4px 0 var(--hud-ink)!important;}
+
+/* ============================== BUILD RAIL ============================== */
+#buildRailShell{
+  position:absolute;
+  left:var(--hud-edge);
+  bottom:42px;
+  z-index:22;
+  width:min(286px,30vw);
+  pointer-events:none;
+}
+#buildRailShell>*{pointer-events:auto;}
+#weaponBar{
+  position:relative!important;
+  left:auto!important;
+  bottom:auto!important;
+  width:100%!important;
+  max-height:min(43vh,370px)!important;
+  gap:5px!important;
+  padding:2px 7px 7px 2px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 15px),transparent 100%)!important;
+  scrollbar-width:thin;
+}
+#weaponBar::after{display:none!important;}
+#weaponBar .ability-panel{
+  --ability-color:var(--hud-heal);
+  width:100%!important;
+  min-height:48px;
+  grid-template-columns:38px minmax(0,1fr)!important;
+  gap:7px!important;
+  padding:5px 7px 6px 5px!important;
+  color:var(--hud-ink)!important;
+  background:rgba(255,253,242,.94)!important;
+  border:2px solid var(--hud-ink)!important;
+  border-left:5px solid var(--ability-color)!important;
+  box-shadow:3px 3px 0 rgba(8,7,25,.72)!important;
+  clip-path:none!important;
+  transform:none!important;
+}
+#weaponBar .ability-panel::after{display:none!important;}
+#weaponBar .ability-icon{
+  width:34px!important;
+  height:34px!important;
+  border:2px solid var(--hud-ink)!important;
+  box-shadow:2px 2px 0 var(--hud-ink)!important;
+  font-size:16px!important;
+}
+#weaponBar .ability-head{min-height:15px;margin:0 0 4px!important;gap:5px!important;}
+#weaponBar .ability-name{
+  font:1000 10px/1.15 "Arial Black","Yu Gothic UI",sans-serif!important;
+}
+#weaponBar .ability-level{
+  padding:2px 4px!important;
+  font:900 7px/1 monospace!important;
+}
+#weaponBar .ability-desc{display:none!important;}
+#weaponBar .ability-stats{
+  flex-wrap:nowrap!important;
+  gap:3px!important;
+  min-width:0;
+  overflow:hidden;
+}
+#weaponBar .ability-stat{
+  display:none;
+  min-width:0;
+  max-width:50%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  padding:2px 4px!important;
+  border:1px solid var(--hud-ink)!important;
+  font:900 7px/1.1 monospace!important;
+}
+#weaponBar .ability-stat:nth-child(-n+2){display:block;}
+#weaponBar .ability-panel.core-panel .ability-stat:nth-child(n+3){display:none!important;}
+#weaponBar .power-meter{display:none!important;}
+
+#buildPanelToggle{
+  position:relative;
+  z-index:24;
+  min-width:132px;
+  height:27px;
+  margin:0 0 7px 2px;
+  padding:0 9px;
+  border:2px solid var(--hud-ink);
+  background:var(--hud-paper-solid);
+  color:var(--hud-ink);
+  box-shadow:3px 3px 0 var(--hud-system);
+  cursor:pointer;
+  font:1000 9px/1 monospace;
+  letter-spacing:.5px;
+}
+#buildPanelToggle::before{content:"▤ ";color:#384dff;}
+#buildPanelToggle:hover,
+#buildPanelToggle:focus-visible{background:var(--hud-system);outline:2px solid var(--hud-paper);outline-offset:2px;}
+#buildPanelToggle[aria-expanded="true"]{background:var(--hud-reward);box-shadow:3px 3px 0 var(--hud-danger);}
+
+body.build-panel-open #buildRailShell{
+  width:min(420px,42vw)!important;
+}
+body.build-panel-open #weaponBar{
+  width:100%!important;
+  max-height:min(68vh,620px)!important;
+  padding:8px 12px 14px 8px!important;
+  background:#17112c;
+  border:2px solid rgba(255,247,220,.68);
+  mask-image:none!important;
+}
+body.build-panel-open #weaponBar .ability-panel{
+  grid-template-columns:48px minmax(0,1fr)!important;
+  min-height:82px;
+  padding:8px 9px 9px 7px!important;
+  border-left-width:7px!important;
+  box-shadow:5px 5px 0 rgba(8,7,25,.84)!important;
+}
+body.build-panel-open #weaponBar .ability-icon{width:43px!important;height:43px!important;font-size:20px!important;}
+body.build-panel-open #weaponBar .ability-name{font-size:12px!important;}
+body.build-panel-open #weaponBar .ability-level{font-size:8px!important;}
+body.build-panel-open #weaponBar .ability-desc{
+  display:block!important;
+  margin:1px 0 6px!important;
+  color:#5b5165!important;
+  font:700 9px/1.4 "Yu Gothic UI",sans-serif!important;
+}
+body.build-panel-open #weaponBar .ability-stats{flex-wrap:wrap!important;overflow:visible!important;}
+body.build-panel-open #weaponBar .ability-stat{
+  display:block!important;
+  max-width:none;
+  padding:3px 5px!important;
+  border-width:1px!important;
+  font-size:8px!important;
+}
+
+/* ============================== TRANSIENT MESSAGES ============================== */
+#upgradeToast{
+  left:50%!important;
+  top:auto!important;
+  bottom:78px!important;
+  width:min(430px,46vw)!important;
+  z-index:38!important;
+  transform:translate(-50%,18px) scale(.98)!important;
+}
+#upgradeToast.show{animation:readableToast 3.15s cubic-bezier(.18,.84,.18,1) both!important;}
+#upgradeToast .upgrade-toast-card{
+  grid-template-columns:44px minmax(0,1fr)!important;
+  gap:9px!important;
+  padding:8px 10px 9px 8px!important;
+  background:rgba(255,253,242,.98)!important;
+  border:2px solid var(--hud-ink)!important;
+  box-shadow:5px 5px 0 var(--toast-color)!important;
+}
+#upgradeToast .upgrade-toast-icon{
+  width:40px!important;
+  height:40px!important;
+  border:2px solid var(--hud-ink)!important;
+  box-shadow:2px 2px 0 var(--hud-ink)!important;
+  font-size:19px!important;
+}
+#upgradeToast .upgrade-toast-kicker{margin-bottom:3px!important;font-size:7px!important;letter-spacing:1.5px!important;}
+#upgradeToast .upgrade-toast-name{margin-bottom:3px!important;font-size:13px!important;line-height:1.1!important;}
+#upgradeToast .upgrade-toast-desc{display:none!important;}
+#upgradeToast .upgrade-toast-effect{
+  padding:3px 5px!important;
+  border:1px solid var(--hud-ink)!important;
+  font:1000 8px/1.2 monospace!important;
+}
+@keyframes readableToast{
+  0%{opacity:0;transform:translate(-50%,18px) scale(.96)}
+  10%,78%{opacity:1;transform:translate(-50%,0) scale(1)}
+  100%{opacity:0;transform:translate(-50%,10px) scale(.98)}
+}
+
+/* ============================== CONTROL DOCK ============================== */
+#pauseBtnWrap{
+  right:var(--hud-edge)!important;
+  bottom:var(--hud-edge)!important;
+  min-height:44px;
+  gap:0!important;
+  padding:4px;
+  align-items:stretch!important;
+  background:rgba(9,7,24,.9);
+  border:2px solid var(--hud-paper);
+  box-shadow:4px 4px 0 var(--hud-abyss);
+}
+#pauseBtnWrap #gameSpeedControl{
+  height:34px!important;
+  padding:0 4px 0 0!important;
+  gap:2px!important;
+  border:0!important;
+  border-right:1px solid rgba(255,247,220,.36)!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#pauseBtnWrap .game-speed-btn{
+  width:28px!important;
+  min-width:28px!important;
+  height:34px;
+  background:var(--hud-paper)!important;
+  font-size:16px!important;
+}
+#pauseBtnWrap #gameSpeedReadout{min-width:45px!important;}
+#pauseBtnWrap #gameSpeedReadout small{font-size:7px!important;}
+#pauseBtnWrap #gameSpeedValue{font-size:14px!important;}
+#pauseBtnWrap #volCtrl{
+  min-width:112px;
+  gap:5px!important;
+  padding:4px 7px!important;
+  background:transparent!important;
+  color:var(--hud-paper)!important;
+  border:0!important;
+  border-right:1px solid rgba(255,247,220,.36)!important;
+  box-shadow:none!important;
+  font-size:11px!important;
+}
+#pauseBtnWrap #volSlider{width:72px!important;}
+#pauseBtnWrap #pauseBtn{
+  min-height:34px!important;
+  margin:0!important;
+  padding:6px 12px!important;
+  border:0!important;
+  background:var(--hud-danger)!important;
+  color:#fff!important;
+  box-shadow:none!important;
+  font-size:10px!important;
+  letter-spacing:.4px!important;
+}
+#pauseBtnWrap #pauseBtn::after{display:none!important;}
+#pauseBtnWrap #pauseBtn:hover{transform:none!important;background:#ff7184!important;}
+#controlsHelpBtn{
+  width:31px;
+  min-width:31px;
+  border:0;
+  border-left:1px solid rgba(255,247,220,.36);
+  background:transparent;
+  color:var(--hud-paper);
+  cursor:pointer;
+  font:1000 13px/1 monospace;
+}
+#controlsHelpBtn:hover,
+#controlsHelpBtn:focus-visible{background:var(--hud-system);color:var(--hud-ink);outline:none;}
+
+#controlsHint{
+  right:var(--hud-edge)!important;
+  bottom:72px!important;
+  max-width:350px;
+  padding:7px 10px!important;
+  color:var(--hud-ink)!important;
+  background:rgba(255,253,242,.96)!important;
+  border:2px solid var(--hud-ink)!important;
+  box-shadow:3px 3px 0 var(--hud-reward)!important;
+  font:900 9px/1.45 monospace!important;
+  opacity:1;
+  transform:translateY(0);
+  transition:opacity .2s ease,transform .2s ease!important;
+}
+#controlsHint.hint-hidden{opacity:0;transform:translateY(8px);pointer-events:none;}
+#controlsHint.hint-visible{opacity:1!important;transform:translateY(0)!important;}
+
+#pauseBtnWrap #gameVersion{
+  position:static!important;
+  display:flex;
+  align-items:center;
+  padding:0 6px;
+  border-left:1px solid rgba(255,247,220,.36);
+  color:rgba(255,247,220,.64)!important;
+  font:900 7px/1 monospace!important;
+  letter-spacing:.04em!important;
+  white-space:nowrap;
+  text-shadow:none!important;
+}
+
+/* ============================== SELECTION CLARITY ============================== */
+#levelUpScreen>div{width:min(1180px,96vw)!important;}
+.upgrade-title{margin-bottom:22px!important;}
+.upgrade-choices{gap:18px!important;}
+.upgrade-card,
+.abyss-power-card,
+#levelUpScreen .upgrade-card{
+  min-height:320px!important;
+  padding:30px 20px 22px!important;
+  border-width:3px!important;
+  box-shadow:7px 7px 0 var(--card-color,var(--hud-system))!important;
+}
+.upgrade-card .upgrade-name{font-size:20px!important;line-height:1.2!important;}
+.upgrade-card .upgrade-desc{font-size:14px!important;line-height:1.6!important;color:#443a4f!important;}
+.upgrade-card .power-trigger{margin:11px 0 9px!important;padding:8px 10px!important;font-size:12px!important;line-height:1.45!important;}
+.upgrade-card .upgrade-current{font-size:11px!important;line-height:1.45!important;}
+.upgrade-card .upgrade-current .after{font-size:12px!important;}
+
+/* ============================== RESPONSIVE ============================== */
+@media (max-width:1180px){
+  :root{--hud-edge:12px;}
+  #topLeftHud{width:min(300px,36vw)!important;}
+  #topRightHud{width:246px;}
+  #buildStatusHud{top:108px!important;max-width:246px!important;}
+  #stageRuleHud{width:min(270px,29vw)!important;}
+  #stageRuleHud.is-expanded,#stageRuleHud:hover,#stageRuleHud:focus-within{width:min(400px,40vw)!important;}
+  #buildRailShell{width:min(260px,29vw)!important;}
+  body.build-panel-open #buildRailShell{width:min(390px,43vw)!important;}
+  #pauseBtnWrap #volCtrl{min-width:96px;}
+  #pauseBtnWrap #volSlider{width:58px!important;}
+}
+
+@media (max-width:900px){
+  #stageRuleHud{top:107px!important;left:12px!important;transform:none!important;width:min(420px,58vw)!important;}
+  #stageRuleHud.is-expanded,#stageRuleHud:hover,#stageRuleHud:focus-within{width:min(500px,64vw)!important;}
+  #bossBarWrap{top:158px!important;width:62vw!important;}
+  #buildStatusHud{top:108px!important;}
+  #buildRailShell{width:min(235px,34vw)!important;}
+  #weaponBar{max-height:36vh!important;}
+  #upgradeToast{width:min(410px,58vw)!important;}
+  #pauseBtnWrap #volCtrl{display:none!important;}
+  .upgrade-choices{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
+
+@media (max-width:680px){
+  :root{--hud-edge:8px;}
+  #topLeftHud{top:8px!important;left:8px!important;width:58vw!important;min-height:72px;padding:8px 9px 8px 56px!important;}
+  #topLeftHud::before{left:58px;top:5px;font-size:7px;}
+  #topLeftHud .lv-badge{left:7px;top:8px;width:39px;height:38px;min-width:39px!important;font-size:10px!important;}
+  #topLeftHud .bar-outer{margin-top:12px!important;height:17px!important;}
+  #topLeftHud .bar-label,#topLeftHud .bar-value{font-size:8px!important;line-height:13px!important;}
+  #topRightHud{top:8px!important;right:8px!important;width:37vw;padding:7px!important;font-size:7px!important;}
+  #topRightHud::before{font-size:6px;padding-bottom:4px;}
+  #topRightHud>div{min-height:27px;padding:3px;}
+  #topRightHud .val,#topRightHud #elapsedVal{font-size:12px!important;margin-top:2px;}
+  #topRightHud #stageVal{font-size:6px!important;}
+  #buildStatusHud{top:87px!important;right:8px!important;max-width:40vw!important;gap:3px!important;}
+  #buildStatusHud span{font-size:6px!important;padding:3px!important;}
+  #stageRuleHud{top:87px!important;left:8px!important;width:54vw!important;min-height:38px!important;grid-template-columns:28px minmax(0,1fr)!important;padding:5px 7px!important;}
+  #stageRuleIcon{width:27px!important;height:27px!important;font-size:14px!important;}
+  #stageRuleHud strong{font-size:9px!important;}
+  #stageRuleHud small{font-size:7px!important;}
+  #stageRuleHud.is-expanded,#stageRuleHud:hover,#stageRuleHud:focus-within{width:72vw!important;}
+  #bossBarWrap{top:136px!important;width:76vw!important;}
+  #buildRailShell{
+    left:8px!important;
+    bottom:39px!important;
+    width:min(210px,53vw)!important;
+  }
+  #weaponBar{
+    width:100%!important;
+    max-height:27vh!important;
+    gap:3px!important;
+  }
+  #weaponBar .ability-panel{grid-template-columns:31px minmax(0,1fr)!important;min-height:39px;padding:4px!important;gap:5px!important;}
+  #weaponBar .ability-icon{width:28px!important;height:28px!important;font-size:13px!important;}
+  #weaponBar .ability-name{font-size:8px!important;}
+  #weaponBar .ability-level{font-size:6px!important;}
+  #weaponBar .ability-stat{font-size:6px!important;}
+  #buildPanelToggle{height:25px;min-width:112px;font-size:7px;}
+  body.build-panel-open #buildRailShell{left:8px!important;right:8px!important;width:auto!important;}
+  body.build-panel-open #weaponBar{width:100%!important;max-height:62vh!important;}
+  #upgradeToast{bottom:66px!important;width:76vw!important;}
+  #upgradeToast .upgrade-toast-desc{display:none!important;}
+  #pauseBtnWrap{right:8px!important;bottom:8px!important;}
+  #pauseBtnWrap #gameSpeedReadout{min-width:38px!important;}
+  #pauseBtnWrap .game-speed-btn{width:25px!important;min-width:25px!important;}
+  #pauseBtnWrap #pauseBtn{padding:6px 8px!important;font-size:8px!important;}
+  #controlsHint{right:8px!important;bottom:61px!important;max-width:86vw;font-size:8px!important;}
+  #pauseBtnWrap #gameVersion{padding:0 4px;font-size:6px!important;}
+  .upgrade-choices{grid-template-columns:1fr!important;max-height:74vh!important;}
+  .upgrade-card,.abyss-power-card{min-height:0!important;}
+}
+
+@media (max-height:690px) and (min-width:681px){
+  #weaponBar{max-height:35vh!important;}
+  #stageRuleHud{top:10px!important;}
+  #bossBarWrap{top:66px!important;}
+  #upgradeToast{bottom:66px!important;}
+  .upgrade-card,.abyss-power-card{min-height:270px!important;padding-top:24px!important;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  #stageRuleHud,#stageRuleHud small,#controlsHint{transition:none!important;}
+  #upgradeToast.show{animation-duration:.01ms!important;}
+}
