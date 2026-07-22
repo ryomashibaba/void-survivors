@@ -1,0 +1,340 @@
+/* VOID SURVIVORS / HUD READABLE SCALE
+   Raises the minimum readable type size without covering the combat field. */
+
+:root{
+  --hud-edge:20px;
+}
+
+/* Vital information: numbers must be readable at a glance. */
+#topLeftHud{
+  width:min(382px,38vw)!important;
+  min-height:106px!important;
+  padding:14px 15px 13px 82px!important;
+}
+#topLeftHud::before{
+  left:84px!important;
+  top:9px!important;
+  font-size:10px!important;
+  letter-spacing:1.5px!important;
+}
+#topLeftHud .lv-badge{
+  left:12px!important;
+  top:12px!important;
+  width:58px!important;
+  min-width:58px!important;
+  height:58px!important;
+  font-size:15px!important;
+}
+#topLeftHud .bar-outer{
+  height:27px!important;
+  margin:20px 0 9px!important;
+}
+#topLeftHud .bar-outer:last-child{
+  height:14px!important;
+}
+#topLeftHud .bar-outer:last-child::after{
+  left:-48px!important;
+  top:0!important;
+  font-size:10px!important;
+  line-height:12px!important;
+}
+#topLeftHud .bar-label,
+#topLeftHud .bar-value{
+  font-size:14px!important;
+  line-height:23px!important;
+}
+
+/* Run telemetry: labels become normal UI text, values remain dominant. */
+#topRightHud{
+  width:350px!important;
+  padding:13px 14px 12px!important;
+  font-size:12px!important;
+  line-height:1.25!important;
+}
+#topRightHud::before{
+  padding-bottom:9px!important;
+  font-size:10px!important;
+  letter-spacing:1.5px!important;
+}
+#topRightHud>div{
+  min-height:49px!important;
+  padding:8px 10px!important;
+}
+#topRightHud .val,
+#topRightHud #elapsedVal{
+  margin-top:5px!important;
+  font-size:23px!important;
+}
+#topRightHud #stageVal{
+  margin-top:5px!important;
+  font-size:11px!important;
+  line-height:1.15!important;
+}
+#buildStatusHud{
+  top:148px!important;
+  max-width:350px!important;
+  gap:6px!important;
+}
+#buildStatusHud span{
+  padding:6px 8px!important;
+  font-size:10px!important;
+}
+
+/* Stage rule: readable without turning into a large center panel. */
+#stageRuleHud{
+  width:min(360px,34vw)!important;
+  min-height:58px!important;
+  grid-template-columns:42px minmax(0,1fr)!important;
+  gap:11px!important;
+  padding:8px 13px!important;
+}
+#stageRuleIcon{
+  width:40px!important;
+  height:40px!important;
+  font-size:21px!important;
+}
+#stageRuleHud strong{
+  font-size:14px!important;
+  line-height:1.25!important;
+}
+#stageRuleHud small{
+  font-size:12px!important;
+  line-height:1.45!important;
+}
+#stageRuleHud.is-expanded,
+#stageRuleHud:hover,
+#stageRuleHud:focus-within{
+  width:min(530px,48vw)!important;
+}
+#stageRuleHud.is-expanded small,
+#stageRuleHud:hover small,
+#stageRuleHud:focus-within small{
+  max-height:58px!important;
+}
+#bossBarWrap{
+  top:94px!important;
+  width:min(600px,48vw)!important;
+}
+#bossName{
+  padding:7px 12px!important;
+  font-size:14px!important;
+}
+#bossBarOuter{
+  height:20px!important;
+}
+
+/* Build rail: the compact state is still readable, the B panel is detailed. */
+#buildRailShell{
+  bottom:66px!important;
+  width:min(356px,34vw)!important;
+}
+#buildPanelToggle{
+  min-width:170px!important;
+  height:34px!important;
+  margin-bottom:9px!important;
+  padding:0 12px!important;
+  font-size:12px!important;
+}
+#weaponBar{
+  max-height:min(47vh,430px)!important;
+  gap:7px!important;
+}
+#weaponBar .ability-panel{
+  min-height:62px!important;
+  grid-template-columns:48px minmax(0,1fr)!important;
+  gap:10px!important;
+  padding:7px 10px 8px 7px!important;
+}
+#weaponBar .ability-icon{
+  width:43px!important;
+  height:43px!important;
+  font-size:20px!important;
+}
+#weaponBar .ability-head{
+  min-height:20px!important;
+  margin-bottom:6px!important;
+  gap:7px!important;
+}
+#weaponBar .ability-name{
+  font-size:14px!important;
+  line-height:1.2!important;
+}
+#weaponBar .ability-level{
+  padding:3px 6px!important;
+  font-size:10px!important;
+}
+#weaponBar .ability-stats{
+  gap:5px!important;
+}
+#weaponBar .ability-stat{
+  padding:3px 6px!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+}
+body.build-panel-open #buildRailShell{
+  width:min(500px,47vw)!important;
+}
+body.build-panel-open #weaponBar .ability-panel{
+  min-height:100px!important;
+  grid-template-columns:58px minmax(0,1fr)!important;
+  padding:11px 13px 12px 10px!important;
+}
+body.build-panel-open #weaponBar .ability-icon{
+  width:52px!important;
+  height:52px!important;
+  font-size:24px!important;
+}
+body.build-panel-open #weaponBar .ability-name{
+  font-size:16px!important;
+}
+body.build-panel-open #weaponBar .ability-level,
+body.build-panel-open #weaponBar .ability-stat{
+  font-size:11px!important;
+}
+body.build-panel-open #weaponBar .ability-desc{
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+
+/* Bottom dock and transient information. */
+#pauseBtnWrap{
+  right:20px!important;
+  bottom:18px!important;
+  min-height:48px!important;
+  gap:7px!important;
+  padding:5px!important;
+}
+#gameSpeedControl{
+  height:42px!important;
+  gap:5px!important;
+  padding:4px!important;
+}
+.game-speed-btn{
+  width:36px!important;
+  min-width:36px!important;
+  font-size:21px!important;
+}
+#gameSpeedReadout{
+  min-width:58px!important;
+}
+#gameSpeedReadout small{
+  font-size:10px!important;
+}
+#gameSpeedValue{
+  font-size:19px!important;
+}
+#volCtrl{
+  min-height:40px!important;
+  gap:7px!important;
+  padding:0 8px!important;
+  font-size:16px!important;
+}
+#volSlider{
+  width:90px!important;
+}
+#pauseBtn{
+  min-height:40px!important;
+  padding:0 18px!important;
+  font-size:13px!important;
+}
+#gameVersion{
+  padding:0 5px!important;
+  font-size:10px!important;
+  letter-spacing:.06em!important;
+}
+#controlsHelpBtn{
+  width:38px!important;
+  min-width:38px!important;
+  height:40px!important;
+  font-size:18px!important;
+}
+#controlsHint{
+  bottom:78px!important;
+  padding:8px 13px!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+}
+#upgradeToast{
+  bottom:82px!important;
+  min-width:340px!important;
+  max-width:min(620px,64vw)!important;
+  padding:13px 18px!important;
+  font-size:15px!important;
+  line-height:1.45!important;
+}
+#warningBanner{
+  font-size:28px!important;
+}
+
+/* Upgrade selection is a reading screen, so it receives a larger floor. */
+#levelUpScreen .upgrade-title{
+  font-size:30px!important;
+}
+#upgradeChoices .upgrade-card,
+#upgradeChoices .upgrade-choice{
+  font-size:14px!important;
+}
+#upgradeChoices .upgrade-name,
+#upgradeChoices h3{
+  font-size:20px!important;
+}
+#upgradeChoices .upgrade-desc,
+#upgradeChoices p{
+  font-size:14px!important;
+  line-height:1.55!important;
+}
+#upgradeChoices .upgrade-stat,
+#upgradeChoices .upgrade-current,
+#upgradeChoices .upgrade-next{
+  font-size:13px!important;
+}
+
+@media (max-width:1180px){
+  :root{--hud-edge:14px;}
+  #topLeftHud{width:min(340px,40vw)!important;}
+  #topRightHud{width:310px!important;}
+  #buildStatusHud{max-width:310px!important;}
+  #stageRuleHud{width:min(320px,36vw)!important;}
+  #buildRailShell{width:min(320px,37vw)!important;}
+  #pauseBtnWrap{right:14px!important;}
+  #volSlider{width:72px!important;}
+}
+
+@media (max-width:900px){
+  #topLeftHud{
+    width:310px!important;
+    min-height:94px!important;
+    padding-left:72px!important;
+  }
+  #topLeftHud .lv-badge{
+    width:50px!important;
+    min-width:50px!important;
+    height:50px!important;
+    font-size:13px!important;
+  }
+  #topRightHud{
+    width:280px!important;
+    font-size:11px!important;
+  }
+  #topRightHud .val,
+  #topRightHud #elapsedVal{font-size:20px!important;}
+  #stageRuleHud{top:120px!important;width:330px!important;}
+  #bossBarWrap{top:184px!important;}
+  #buildRailShell{width:300px!important;}
+  #pauseBtnWrap{transform:scale(.9);transform-origin:right bottom;}
+}
+
+@media (max-width:680px){
+  #topLeftHud{width:calc(100vw - 28px)!important;}
+  #topRightHud{top:118px!important;left:14px!important;right:auto!important;width:280px!important;}
+  #stageRuleHud{top:118px!important;right:14px!important;left:auto!important;transform:none!important;width:calc(100vw - 322px)!important;}
+  #buildRailShell{width:min(300px,55vw)!important;}
+  #weaponBar .ability-name{font-size:12px!important;}
+  #pauseBtnWrap{transform:scale(.82);}
+}
+
+@media (max-height:720px){
+  #buildRailShell{bottom:58px!important;}
+  #weaponBar{max-height:36vh!important;}
+  #controlsHint{bottom:68px!important;}
+}
