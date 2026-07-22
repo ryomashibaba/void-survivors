@@ -261,6 +261,8 @@ class DamageText{
     this.vy = crit ? -140 : -80;
     this.crit=crit;this.dead=false;
     this.vx = U.rand(-30,30);
+    const amount = Math.abs(Number(String(text).replace(/[^\d.]/g,""))) || 0;
+    this.amountScale = U.clamp(1 + Math.log10(Math.max(1,amount))*0.16, 1, 1.72);
     this.scale = crit ? 1.8 : 1.0;
     this.rot = U.rand(-0.3,0.3);
   }
@@ -278,13 +280,13 @@ class DamageText{
     ctx.rotate(this.rot);
     ctx.globalAlpha = a;
     if (this.crit){
-      ctx.font = "bold 48px sans-serif";
+      ctx.font = `bold ${Math.round(62*this.amountScale)}px sans-serif`;
       ctx.shadowColor = this.color;
       ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
     } else {
-      ctx.font = "bold 26px sans-serif";
+      ctx.font = `bold ${Math.round(38*this.amountScale)}px sans-serif`;
       ctx.shadowColor = this.color;
       ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 1;
